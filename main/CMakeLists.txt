@@ -1,4 +1,4 @@
-set(COMPONENT_SRCS "espforth.c")
-set(COMPONENT_ADD_INCLUDEDIRS "")
-register_component()
-component_compile_options(-Desp32)
+idf_component_register(SRCS "espforth.c"
+                    INCLUDE_DIRS ".")
+
+idf_build_set_property(COMPILE_OPTIONS "-Desp32" APPEND)

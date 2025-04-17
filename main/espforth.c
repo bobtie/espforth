@@ -14,13 +14,18 @@
 #include <sys/stat.h>
 #include <sys/select.h>
 
+#define esp32
+
 #ifdef esp32
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
+#include "esp_log.h"
+#  include "esp_mac.h"
 #  include "freertos/FreeRTOS.h"
 #  include "freertos/task.h"
 #  include "esp_system.h"
 #  include "driver/gpio.h"
 #  include "driver/ledc.h"
-#  include "esp_spi_flash.h"
+// #  include "esp_spi_flash.h"
 #  include "esp_err.h"
 #  include "esp_vfs.h"
 #  include "esp_vfs_dev.h"
@@ -31,6 +36,8 @@
 #  include <termios.h>
 #  include <unistd.h>
 #endif
+
+static const char* TAG = "espforth";
 
 #define DEBUG_CORE_WORDS 0
 #define FILE_BUFFER_SIZE 0x4000
@@ -76,11 +83,15 @@ static const int COMPO=0x40;
 mode_t umask(mode_t v) {
   return 0777;
 }
-int ftruncate(int fd, off_t sz) {
-  errno = EINVAL;
-  return -1;
-}
 #endif
+
+// TODO: bobtie otherwise duplicated
+// #ifdef esp32
+// int ftruncate(int fd, off_t sz) {
+//   errno = EINVAL;
+//   return -1;
+// }
+// #endif
 
 #define PRIMITIVE_LIST \
   X("NOP", NOP, next()) \
@@ -379,7 +390,7 @@ static int duplexread(unsigned char* dst, int sz) {
 
 static void setpin(int p, int level) {
 #ifdef esp32
-   gpio_pad_select_gpio(p);
+   gpio_reset_pin(p);
    gpio_set_direction(p, GPIO_MODE_OUTPUT);
    gpio_set_level(p, top);
 #endif
@@ -502,6 +513,10 @@ static void run() {
 #define BOOT_PATH "/spiflash/boot.fs"
 static wl_handle_t s_wl_handle = WL_INVALID_HANDLE;
 static void Init(void) {
+
+
+  ESP_LOGI(TAG, "Init() begin ...");
+
   const char *base_path = "/spiflash";
 
   setvbuf(stdin, NULL, _IONBF, 0);
@@ -517,6 +532,7 @@ static void Init(void) {
       .format_if_mount_failed = true,
       .allocation_unit_size = CONFIG_WL_SECTOR_SIZE
   };
+
   esp_err_t err = esp_vfs_fat_spiflash_mount(
     base_path, "storage", &mount_config, &s_wl_handle);
   if (err != ESP_OK) {
@@ -524,6 +540,7 @@ static void Init(void) {
     return;
   }
 }
+
 #else
 #define BOOT_PATH "boot.fs"
 static struct termios terminalOld;
@@ -545,6 +562,7 @@ static void Init(void) {
 
 #ifdef esp32
 void app_main(void) {
+  printf("starting main ...\n");
 #else
 int main(void) {
 #endif
@@ -850,7 +868,8 @@ int main(void) {
   CheckSum();
 #endif
 
-  setpin(13, 0);  // Indicate successful boot.
+// setpin(13, 0);  // Indicate successful boot.
   run();
+
 }
 
