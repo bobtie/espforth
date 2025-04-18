@@ -14,7 +14,7 @@
 #include <sys/stat.h>
 #include <sys/select.h>
 
-#define esp32
+// #define esp32
 
 #ifdef esp32
 #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
