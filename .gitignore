@@ -1,3 +1,4 @@
 build/
 main/espforth
 main/espforth.dSYM
+.vscode/settings.json
