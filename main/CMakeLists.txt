@@ -1,4 +1,2 @@
-idf_component_register(SRCS "espforth.c"
-                    INCLUDE_DIRS ".")
+add_executable(lnxespforth espforth.c)
 
-idf_build_set_property(COMPILE_OPTIONS "-Desp32" APPEND)
