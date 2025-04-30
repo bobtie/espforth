@@ -6,3 +6,4 @@ cmake_minimum_required(VERSION 3.5)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(espforth)
+fatfs_create_spiflash_image(storage fatfs FLASH_IN_PROJECT)
