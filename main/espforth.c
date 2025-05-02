@@ -215,8 +215,8 @@ mode_t umask(mode_t v) {
   X("PEEK", PEEK, Pointer = (cell_t*)top; top = *Pointer) \
   X("ADC", ADC, /* top= (cell_t) analogRead(top); */ top = (cell_t) 0) \
   X("PINMODE", PINMODE, WP = top; pop; set_pin_direction(WP, top); pop) \
-  X("SETPIN", SETPIN, WP = top; pop; set_pin_level(WP, top); pop) \
-  X("GETPIN", GETPIN, top = get_pin_level(top)) \
+  X("PINSET", SETPIN, WP = top; pop; set_pin_level(WP, top); pop) \
+  X("PINGET", GETPIN, top = get_pin_level(top)) \
   X("DUTY", DUTY, WP = top; pop; /* ledcAnalogWrite(WP,top,255); */ pop) \
   X("FREQ", FREQ, WP = top; pop; /* ledcSetup(WP,top,13); */ pop) \
   X("MS", MS, WP = top; pop; mspause(WP)) \

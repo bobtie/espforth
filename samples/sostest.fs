@@ -1,9 +1,10 @@
-: on 0 13 pin ;
-: off 1 13 pin ;
-: dot on 100 ms off 100 ms ;
-: dash on 300 ms off 100 ms ;
-: gap 300 ms ;
-: sos dot dot dot gap dash dash dash gap dot dot dot gap ;
-: test begin sos gap again ;
-test
+100 constant BEAT
 
+: testinit 2 2 pinmode ;
+: on 1 2 pinset ;
+: off 0 2 pinset ;
+: dot BEAT DUP on ms off ms ;
+: dash on BEAT DUP 2 * ms off ms ;
+: gap BEAT 2 * ms ;
+: sos dot dot dot gap dash dash dash gap dot dot dot gap ;
+: test testinit begin sos gap again ;
