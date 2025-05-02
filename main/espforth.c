@@ -39,7 +39,7 @@
 
 static const char* TAG = "espforth";
 
-#define DEBUG_CORE_WORDS 0
+#define DEBUG_CORE_WORDS 1
 #define FILE_BUFFER_SIZE 0x4000
 
 typedef intptr_t cell_t;
@@ -253,6 +253,12 @@ static char filename[4096];
   PRIMITIVE_LIST
 #undef X
 
+const char * opname [] = {
+#define X(sname, name, code) sname,
+  PRIMITIVE_LIST
+#undef X
+};
+
 static void HEADER(int flags, const char *name) {
   assert(IP % sizeof(cell_t) == 0);
   P=IP/sizeof(cell_t);
@@ -435,7 +441,8 @@ int CODE(const char *name, ... ) {
     cData[IP++] = s;
 #if DEBUG_CORE_WORDS
     printf(" ");
-    printf("%" PRIxCELL, s);
+    // printf("%" PRIxCELL, s);
+    printf("%s", opname[s]);
 #endif
   } while(s != as_NEXTT);
   while (IP & CELL_MASK) {
@@ -504,7 +511,9 @@ static void run() {
   P = COLD;
   WP = P + sizeof(cell_t);
   for(;;) {
+    int lastP = P;
     unsigned char bytecode = cData[P++];
+    printf("executing at %u: %s\n",lastP,opname[bytecode]);
     primitives[bytecode]();
   }
 }
