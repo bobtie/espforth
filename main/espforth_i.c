@@ -2802,8 +2802,8 @@
 #include <unistd.h>
 #endif
 
-// #define log(...) fprintf(stderr, __VA_ARGS__)
-#define log(...)
+#define log(...) fprintf(stderr, __VA_ARGS__)
+// #define log(...)
 
 static const char *TAG = "espforth";
 
@@ -3527,7 +3527,9 @@ static void fun_READ_FILE(void)
      top = stack[(unsigned char)S--];
      cell_t len = top;
      top = stack[(unsigned char)S--];
+     log("fun_READ_FILE, fd=%ld, address=%ld, len=%ld\n",fd,top,len);
      top = read(fd, &cData[top], len);
+     log("fun_READ_FILE, read=%ld\n",top);
      stack[(unsigned char)++S] = top, top = top != len ?
 
                                                        (*__errno_location())
@@ -4179,8 +4181,15 @@ void pwd() {
 
  }
 
-int main(void)
+int main(int argc, const char * argv[])
 {
+     printf("lnxespforth, ver. 1.1\n");
+     const char * fname = "boot.fs";
+
+     if (argc == 2) {
+          fname = argv[1];
+     }
+
      // pwd();
 
      Init();
@@ -4439,7 +4448,7 @@ int main(void)
      COLON_WITH_FLAGS(0, "FORGET", TOKEN, NAMEQ, QDUP, IF, CELLM, DUP, CP, STORE, AT, DUP, CONTEXT, STORE, LAST, STORE, DROP, EXIT, THEN, ERRORR, EXIT)
 
          ;
-     int BOOT = COLON_WITH_FLAGS(0, "BOOT", STRQ, "boot.fs", COUNT, R_O, OPEN_FILE, IF, DROP, ELSE, FIB, SWAP, DOLIT, NFIB, AT, SWAP, READ_FILE, IF, DROP, ELSE, FIB, SWAP, LOAD, THEN, THEN, EXIT)
+     int BOOT = COLON_WITH_FLAGS(0, "BOOT", STRQ, fname, COUNT, R_O, OPEN_FILE, IF, DROP, ELSE, FIB, SWAP, DOLIT, NFIB, AT, SWAP, READ_FILE, IF, DROP, ELSE, FIB, SWAP, LOAD, THEN, THEN, EXIT)
 
          ;
      COLD = COLON_WITH_FLAGS(0, "COLD", BOOT, DOTQ, "AIBOT ESP32 Forth", CR, BEGIN, QUIT, AGAIN, EXIT);
