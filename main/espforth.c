@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 #include <sys/select.h>
 
+// TODO: bobtie remove before committing
 // #define esp32
 
 #ifdef esp32
@@ -213,7 +214,9 @@ mode_t umask(mode_t v) {
     *Pointer = stack[(unsigned char)S--]; pop) \
   X("PEEK", PEEK, Pointer = (cell_t*)top; top = *Pointer) \
   X("ADC", ADC, /* top= (cell_t) analogRead(top); */ top = (cell_t) 0) \
-  X("PIN", PIN, WP = top; pop; setpin(WP, top); pop) \
+  X("PINMODE", PINMODE, WP = top; pop; set_pin_direction(WP, top); pop) \
+  X("PINSET", SETPIN, WP = top; pop; set_pin_level(WP, top); pop) \
+  X("PINGET", GETPIN, top = get_pin_level(top)) \
   X("DUTY", DUTY, WP = top; pop; /* ledcAnalogWrite(WP,top,255); */ pop) \
   X("FREQ", FREQ, WP = top; pop; /* ledcSetup(WP,top,13); */ pop) \
   X("MS", MS, WP = top; pop; mspause(WP)) \
@@ -271,7 +274,7 @@ static void HEADER(int flags, const char *name) {
   printf("[%" PRIxCELL "]", links);
   for (i=links/sizeof(cell_t);i<P;i++) {
     printf(" ");
-    printf("%" PRIxCELL, data[i]);
+    printf("%08" PRIxCELL, data[i]);
   }
 #endif
   links=IP;
@@ -286,7 +289,7 @@ static void HEADER(int flags, const char *name) {
   printf("\n");
   printf("%s", name);
   printf(" (at: ");
-  printf("%" PRIxCELL, IP);
+  printf("%08" PRIxCELL, IP);
   printf(") ");
 #endif
 }
@@ -394,12 +397,23 @@ static int duplexread(unsigned char* dst, int sz) {
   return len;
 }
 
-static void setpin(int p, int level) {
+static void set_pin_direction(int p, int m) {
 #ifdef esp32
    gpio_reset_pin(p);
-   gpio_set_direction(p, GPIO_MODE_OUTPUT);
-   gpio_set_level(p, top);
+   gpio_set_direction(p, m);
 #endif
+}
+
+static void set_pin_level(int p, int level) {
+  #ifdef esp32
+     gpio_set_level(p, top);
+  #endif
+}
+
+static cell_t get_pin_level(int p) {
+  #ifdef esp32
+     return gpio_get_level(p);
+  #endif
 }
 
 static void mspause(cell_t ms) {
@@ -571,7 +585,6 @@ static void Init(void) {
 
 #ifdef esp32
 void app_main(void) {
-  printf("starting main ...\n");
 #else
 int main(void) {
 #endif

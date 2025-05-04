@@ -1,5 +1,8 @@
+: HELLO ." Hello Forth user: file example 3" ;
+CR HELLO CR CR 
+
 : 0= INVERSE ;
-: FN $" prova.fs" ;
+: FN $" /spiflash/prova.fs" ;
 : W $" hello world!!!\n" ;
 VARIABLE FD
 VARIABLE BUF 100 ALLOT
@@ -25,7 +28,8 @@ VARIABLE BUF 100 ALLOT
 : TEST-READ-FILE FN count r/o open-file 0= IF
 	." file opened!" CR
 	>R BUF 10 R@ read-file 0= IF
-			." buffer read, len: " . CR
+			." buffer read, len: " DUP . CR
+			." content:" BUF 10 TYPE CR
 		ELSE
 			." cannot read buffer, reason:" . CR
 		THEN
