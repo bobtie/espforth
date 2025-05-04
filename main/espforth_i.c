@@ -2779,7 +2779,10 @@
 #include <sys/stat.h>
 #include <sys/select.h>
 
+#include <ctype.h>
+
 // #define esp32
+// #define BB_LOG
 
 #ifdef esp32
 #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
@@ -2802,8 +2805,11 @@
 #include <unistd.h>
 #endif
 
+#ifdef BB_LOG
 #define log(...) fprintf(stderr, __VA_ARGS__)
-// #define log(...)
+#else
+#define log(...)
+#endif
 
 static const char *TAG = "espforth";
 
@@ -2914,6 +2920,7 @@ static int FILE_POSITION = 0;
 static int REPOSITION_FILE = 0;
 static int RESIZE_FILE = 0;
 static int FILE_SIZE = 0;
+static int DUMP = 0;
 
 static void HEADER(int flags, const char *name)
 {
@@ -3587,6 +3594,67 @@ static void fun_FILE_SIZE(void)
                                                    : 0;
 }
 
+static void fun_DUMP1(void) {
+     cell_t nchar = top;
+     top = stack[(unsigned char)S--];
+
+     cell_t addr = top;
+     top = stack[(unsigned char)S--];
+
+     for (cell_t i = 0; i< nchar; i++) {
+          printf("'%c' %x ", cData[addr+i],cData[addr+i]);
+          if ((i+1) % 16 == 0) {
+               printf("\n");
+          }
+     }
+}
+
+// ----
+
+
+
+
+
+static void fun_DUMP(void) {
+     cell_t nchar = top;
+     top = stack[(unsigned char)S--];
+
+     cell_t addr = top;
+     top = stack[(unsigned char)S--];
+
+    size_t i, j;
+
+    for (i = 0; i < nchar; i += 16) {
+        // Print offset
+        printf("%08zx: ", addr+i);
+
+        // Print hex values
+        for (j = 0; j < 16; ++j) {
+            if (i + j < nchar)
+                printf("%02x ", cData[addr+i + j]);
+            else
+                printf("   "); // Padding for short lines
+        }
+
+        // Print separator
+        printf(" ");
+
+        // Print ASCII characters
+        for (j = 0; j < 16; ++j) {
+            if (i + j < nchar) {
+                unsigned char c = cData[addr+i + j];
+                printf("%c", isprint(c) ? c : '.');
+            }
+        }
+
+        printf("\n");
+    }
+}
+
+
+// ----
+
+
 static void (*primitives[])(void) = {
 
     fun_NOP,
@@ -3677,6 +3745,7 @@ static void (*primitives[])(void) = {
     fun_REPOSITION_FILE,
     fun_RESIZE_FILE,
     fun_FILE_SIZE,
+    fun_DUMP
 
 };
 
@@ -3772,6 +3841,7 @@ enum
      as_REPOSITION_FILE,
      as_RESIZE_FILE,
      as_FILE_SIZE,
+     as_DUMP
 
 };
 
@@ -4305,6 +4375,7 @@ int main(int argc, const char * argv[])
      REPOSITION_FILE = CODE("reposition-file", as_REPOSITION_FILE, as_NEXTT);
      RESIZE_FILE = CODE("resize-file", as_RESIZE_FILE, as_NEXTT);
      FILE_SIZE = CODE("file-size", as_FILE_SIZE, as_NEXTT);
+     DUMP = CODE("DUMP",as_DUMP, as_NEXTT);
 
      int BLANK = CONSTANT("BL", ' ');
      CONSTANT("CELL", sizeof(cell_t));
@@ -4437,9 +4508,9 @@ int main(int argc, const char * argv[])
      int DMP = COLON_WITH_FLAGS(0, "dm+", OVER, DOLIT, 6, UDOTR, FOR, AFT, DUP, AT, DOLIT, 9, UDOTR, CELLP, THEN, NEXT, EXIT)
 
          ;
-     COLON_WITH_FLAGS(0, "DUMP", BASE, AT, TOR, HEX, DOLIT, 0x1F, PLUS, DOLIT, 0x20, SLASH, FOR, AFT, CR, DOLIT, 8, DDUP, DMP, TOR, SPACE, CELLS, TYPES, RFROM, THEN, NEXT, DROP, RFROM, BASE, STORE, EXIT)
+     // COLON_WITH_FLAGS(0, "DUMP", BASE, AT, TOR, HEX, DOLIT, 0x1F, PLUS, DOLIT, 0x20, SLASH, FOR, AFT, CR, DOLIT, 8, DDUP, DMP, TOR, SPACE, CELLS, TYPES, RFROM, THEN, NEXT, DROP, RFROM, BASE, STORE, EXIT)
 
-         ;
+     //    ;
      COLON_WITH_FLAGS(0, ">NAME", CONTEXT, BEGIN, AT, DUP, WHILE, DDUP, NAMET, XOR, IF, ONEM, ELSE, SWAP, DROP, EXIT, THEN, REPEAT, SWAP, DROP, EXIT);
      int DOTID = COLON_WITH_FLAGS(0, ".ID", COUNT, DOLIT, 0x1F, AND, TYPES, SPACE, EXIT);
      COLON_WITH_FLAGS(0, "WORDS", CR, CONTEXT, DOLIT, 0, TEMP, STORE, BEGIN, AT, QDUP, WHILE, DUP, SPACE, DOTID, CELLM, TEMP, AT, DOLIT, 8, LESS, IF, DOLIT, 1, TEMP, PSTORE, ELSE, CR, DOLIT, 0, TEMP, STORE, THEN, REPEAT, EXIT)
