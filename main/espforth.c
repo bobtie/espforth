@@ -392,6 +392,7 @@ static int duplexread(unsigned char* dst, int sz) {
 }
 
 static void set_pin_direction(int p, int m) {
+  /* m = 1 for input, m = 2 for output*/
 #ifdef esp32
    gpio_reset_pin(p);
    gpio_set_direction(p, m);
@@ -811,7 +812,7 @@ int main(void) {
   COLON("FORGET", TOKEN,NAMEQ,QDUP,IF,
     CELLM,DUP,CP,STORE,AT,DUP,CONTEXT,STORE,LAST,STORE,DROP,EXIT,THEN,
     ERRORR,EXIT);
-  int BOOT=COLON("BOOT", STRQ,BOOT_PATH,COUNT,R_O,OPEN_FILE,IF,DROP,ELSE,
+  int BOOT=COLON("BOOT", STRQ,BOOT_PATH,COUNT,R_O,OPEN_FILE,IF,DROP,DOTQ, "file not found:", DOTQ, BOOT_PATH, CR,ELSE,
     FIB,SWAP,DOLIT,NFIB,AT,SWAP,READ_FILE,
     IF,DROP,ELSE,FIB,SWAP,LOAD,THEN,THEN,EXIT);
   COLD=COLON("COLD",

@@ -45,8 +45,8 @@ ELEV-SIM-FLOOR-HEIGHT 3 * CONSTANT ELEV-SIM-CEIL
 
 : ELEV-SIM-STEP
     ELEV-SIM-POSITION @ ELEV-SIM-DIRECTION @ ELEV-SIM-SPEED * + 
-    DUP 0 < IF ." elevator crashed at ground" CR ABORT ELSE
-    DUP ELEV-SIM-CEIL SWAP < IF ." elevator crashed at ceil" CR ABORT ELSE
+    DUP 0 < IF ." elevator crashed at ground" CR BYE ELSE
+    DUP ELEV-SIM-CEIL SWAP < IF ." elevator crashed at ceil" CR BYE ELSE
         ELEV-SIM-POSITION !
     THEN THEN
 ;
@@ -63,32 +63,56 @@ ELEV-SIM-FLOOR-HEIGHT 3 * CONSTANT ELEV-SIM-CEIL
     ELEV-SIM-SENSOR-RANGE < IF = IF 1 ELSE 0 THEN ELSE DROP DROP 0 THEN
 ;
 
+\ -- utils
+
+variable RSTATE
+
+: RAND ( -- n)
+    RSTATE @ 1664525 * 1013904223 + 4294967296 MOD DUP RSTATE !
+;
+
+: NRAND ( n -- n1 )
+    RAND SWAP MOD
+;
+
+
 : SWAP-R 
     R> R> R> SWAP >R >R >R
 ;
 
+: << ( n1 n2 -- n3 ) \ left shift
+    FOR AFT 2 * THEN NEXT
+;
+
+
+: .S 
+    2 FOR ROT DUP . NEXT
+;
+
 : SHOW-PIN-NUMBERS ( -- )
 \ display pin 
-    0 >R 3 FOR ." button: " SWAP-R R@ . BUTTONS R@ cells + @ BL EMIT ." pin: " . CR R> 1 + >R SWAP-R NEXT R>
-    0 >R 3 FOR ." led   : " SWAP-R R@ . LEDS    R@ cells + @ BL EMIT ." pin: " . CR R> 1 + >R SWAP-R NEXT R>
+    0 >R 3 FOR ." button: " SWAP-R R@ . BUTTONS R@ cells + @ BL EMIT ." pin: " . CR R> 1 + >R SWAP-R NEXT R> DROP
+    0 >R 3 FOR ." led   : " SWAP-R R@ . LEDS    R@ cells + @ BL EMIT ." pin: " . CR R> 1 + >R SWAP-R NEXT R> DROP
 ;
 
 : .PINMODE ( n -- )
     DUP 1 = IF ." input" DROP ELSE 2 = IF ." output"  ELSE ." ERROR: unknown mode" ABORT THEN THEN
 ;
 
-: PINMODE ( n p -- )
-    SWAP
-    ." set mode " .PINMODE BL EMIT ." for pin " . CR
-;
+\ begin simulate gpio
+\ : PINMODE ( n p -- )
+\     SWAP
+\     ." set mode " .PINMODE BL EMIT ." for pin " . CR
+\ ;
 
-: PINSET ( n p -- ) 
-    ." set pin " . BL EMIT ." to " . CR
-;
+\ : PINSET ( n p -- ) 
+\     ." set pin " . BL EMIT ." to " . CR
+\ ;
 
-: PINGET ( n -- m )
-    ." get pin " . BL EMIT ." as " 1 dup . CR
-;
+\ : PINGET ( n -- m )
+\     ." get pin " . BL EMIT ." as " 1 dup . CR
+\ ;
+\ end of simulate gpio
 
 : INIT-PIN-NUMBERS ( -- )
     13 BUTTONS 0 cells + !
@@ -126,7 +150,6 @@ ELEV-SIM-FLOOR-HEIGHT 3 * CONSTANT ELEV-SIM-CEIL
     INIT-PIN-NUMBERS
     SHOW-PIN-NUMBERS
     INIT-MODES
-    SHOW-ELEV
 ;
 
 : MOVE-ELEV ( n -- )
@@ -163,6 +186,14 @@ ELEV-SIM-FLOOR-HEIGHT 3 * CONSTANT ELEV-SIM-CEIL
     NEXT
 ;
 
+: SET-LED ( n1 n2 -- ) \ set led n2 to level n1
+    LEDS SWAP CELLS + @ PINSET
+;
+
+: DRIVE-LEDS ( n -- ) \ set a led on/off depending on given bit mask
+    3 FOR DUP 1 R@ << AND IF 1 ELSE 0 THEN R@ SET-LED NEXT DROP
+;
+
 : T-STEP
         ELEV-SIM-STEP ELEV-SIM-DUMP
         ." sensor readings:" ELEV-SCAN-SENSORS . CR
@@ -173,14 +204,34 @@ ELEV-SIM-FLOOR-HEIGHT 3 * CONSTANT ELEV-SIM-CEIL
     ELEV-SIM-UP
 ;
 
-: T ( n -- n )
+
+
+: T ( m -- n )
+    1 SWAP << >R \ save target floor
     T2
     1
     BEGIN
         DUP ." step:" . CR 1+
         T-STEP
-        ELEV-SCAN-SENSORS 8 = 
+        ELEV-SCAN-SENSORS R@ = 
     UNTIL
+    R> DROP
 ;
 
-." T for testing."
+: T1
+    INIT
+    BEGIN
+        16 NRAND DRIVE-LEDS 100 MS 
+    AGAIN
+;
+
+: T2 
+    INIT
+    BEGIN
+        SCAN-BUTTONS DRIVE-LEDS
+    AGAIN
+;
+
+: HELP
+    ." use 'T' for testing." CR
+;
