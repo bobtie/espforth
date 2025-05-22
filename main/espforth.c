@@ -208,9 +208,9 @@ mode_t umask(mode_t v) {
   X("DOVAR", DOVAR, push WP) \
   X("MAX", MAX, if (top < stack[(unsigned char)S]) pop; else S--) \
   X("MIN", MIN, if (top < stack[(unsigned char)S]) S--; else pop) \
-  X("TONEINIT", TONEINIT, WP=top; pop; ledcWriteTone(WP,top); pop) \ 
-  X("TONEFREQ", TONEFREQ, WP=top; pop; ledChangeTone(WP) ) \
-  X("TONESTATE", TONESTATE, WP=top; pop; ledToneState(WP) ) \
+  X("TONE-INIT", TONEINIT, WP=top; pop; ledcWriteTone(WP,top); pop) \ 
+  X("TONE-FREQ", TONEFREQ, WP=top; pop; ledChangeTone(WP) ) \
+  X("TONE-STATE", TONESTATE, WP=top; pop; ledToneState(WP) ) \
   X("sendPacket", sendPacket, ) \
   X("POKE", POKE, Pointer = (cell_t*)top; \
     *Pointer = stack[(unsigned char)S--]; pop) \
