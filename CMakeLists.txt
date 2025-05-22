@@ -13,6 +13,9 @@ set(FS_BUILD_DIR "${CMAKE_BINARY_DIR}/fs_staging")
 
 file(MAKE_DIRECTORY "${FS_BUILD_DIR}")
 
-file(COPY_FILE "samples/7segs_demo.fs" "${FS_BUILD_DIR}/boot.fs")
+configure_file(
+    "samples/version.fs" 
+    "${FS_BUILD_DIR}/boot.fs"
+)
 
 fatfs_create_spiflash_image(storage ${FS_BUILD_DIR} FLASH_IN_PROJECT)
