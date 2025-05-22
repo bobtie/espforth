@@ -22,13 +22,15 @@
 
 
 i2c-m-init
+2 18 PINMODE
+
 hex
 
 68 constant 7s-left
 variable 7s-map 3F , 06 , 5B , 4F , 66 , 6D , 7D , 07 , 7F , 6F ,
 
 : 7s-turnon
-    f1 48 i2c-m-write
+    11 48 i2c-m-write
 ;
 
 decimal
@@ -54,13 +56,28 @@ decimal
     drop
 ;
 
-: 7s-counter
-    9999 FOR DUP 9999 R@ - 7s-number MS NEXT
+: beep 1 18 pinset 10 ms 0 18 pinset ;
+
+: beep-if-100 ( n1 n2 -- ) \ beep if n2 mod 100 = 0 and wait n1 (>= 10)
+    100 mod 0 = IF beep 10 - then ms
 ;
 
+: 7s-counter-with-beep
+    9999 FOR DUP 9999 R@ - 
+    dup 7s-number beep-if-100 NEXT
+;
+
+: 7s-counter
+    9999 
+    FOR 
+        DUP 9999 R@ - 7s-number MS
+    NEXT
+;
 
 : HELP
-." 7-segments demo v 1.0" CR
+." 7-segments demo ver 1.4" CR
 ;
+
+7s-turnon
 
 HELP
