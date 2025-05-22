@@ -208,7 +208,9 @@ mode_t umask(mode_t v) {
   X("DOVAR", DOVAR, push WP) \
   X("MAX", MAX, if (top < stack[(unsigned char)S]) pop; else S--) \
   X("MIN", MIN, if (top < stack[(unsigned char)S]) S--; else pop) \
-  X("TONE", TONE, WP=top; pop; /* ledcWriteTone(WP,top); */ pop) \
+  X("TONEINIT", TONEINIT, WP=top; pop; ledcWriteTone(WP,top); pop) \ 
+  X("TONEFREQ", TONEFREQ, WP=top; pop; ledChangeTone(WP) ) \
+  X("TONESTATE", TONESTATE, WP=top; pop; ledToneState(WP) ) \
   X("sendPacket", sendPacket, ) \
   X("POKE", POKE, Pointer = (cell_t*)top; \
     *Pointer = stack[(unsigned char)S--]; pop) \
@@ -417,6 +419,62 @@ static void mspause(cell_t ms) {
 #else
   usleep(ms * 1000);
 #endif
+}
+
+
+
+#define PWM_GPIO        18      // GPIO pin for PWM
+#define PWM_FREQ_HZ     440    // Frequency in Hertz
+#define PWM_DUTY_RES    LEDC_TIMER_8_BIT // 8-bit resolution (0-255)
+#define PWM_DUTY        128     // 50% duty cycle (128 out of 255)
+#define PWM_TIMER       LEDC_TIMER_0
+#define PWM_MODE        LEDC_HIGH_SPEED_MODE
+#define PWM_CHANNEL     LEDC_CHANNEL_0
+
+void ledToneState(int s)
+{
+    if (s == 0) {
+      ledc_timer_pause(PWM_MODE, PWM_TIMER);
+    } else {
+      ledc_timer_resume(PWM_MODE, PWM_TIMER);
+    }
+
+}
+
+void ledChangeTone(int freq)
+{
+    ledc_set_freq(PWM_MODE, PWM_TIMER, freq);
+}
+
+void ledcWriteTone(int pin, int freq)
+{
+    // printf("ledcWriteTone, freq: %d, pin: %d\n", freq, pin);
+    // Configure the PWM timer
+    ledc_timer_config_t ledc_timer = {
+        .speed_mode       = PWM_MODE,
+        .timer_num        = PWM_TIMER,
+        .duty_resolution  = PWM_DUTY_RES,
+        .freq_hz          = freq,
+        .clk_cfg          = LEDC_AUTO_CLK
+    };
+
+    ledc_timer_config(&ledc_timer);
+
+    ledc_timer_pause(PWM_MODE, PWM_TIMER);
+
+    // Configure the PWM channel
+    ledc_channel_config_t ledc_channel = {
+        .speed_mode     = PWM_MODE,
+        .channel        = PWM_CHANNEL,
+        .timer_sel      = PWM_TIMER,
+        .intr_type      = LEDC_INTR_DISABLE,
+        .gpio_num       = pin,
+        .duty           = PWM_DUTY,
+        .hpoint         = 0
+    };
+
+    ledc_channel_config(&ledc_channel);
+
 }
 
 #define X(sname, name, code) static void fun_ ## name(void) { code; }
