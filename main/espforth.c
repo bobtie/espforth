@@ -33,6 +33,7 @@
 #  include "esp_vfs_fat.h"
 #  include "esp_system.h"
 #  include "driver/uart.h"
+#  include "driver/i2c.h"
 #else
 #  include <termios.h>
 #  include <unistd.h>
@@ -211,6 +212,8 @@ mode_t umask(mode_t v) {
   X("TONE-INIT", TONEINIT, WP=top; pop; ledcWriteTone(WP,top); pop) \ 
   X("TONE-FREQ", TONEFREQ, WP=top; pop; ledChangeTone(WP) ) \
   X("TONE-STATE", TONESTATE, WP=top; pop; ledToneState(WP) ) \
+  X("I2C-M-INIT", I2CMINIT, top=i2c_master_init()) \
+  X("I2C-M-WRITE", I2CMWRITE, WP=top; pop; top=i2c_write(WP,top)) \
   X("sendPacket", sendPacket, ) \
   X("POKE", POKE, Pointer = (cell_t*)top; \
     *Pointer = stack[(unsigned char)S--]; pop) \
@@ -475,6 +478,47 @@ void ledcWriteTone(int pin, int freq)
 
     ledc_channel_config(&ledc_channel);
 
+}
+
+// ---- i2c control
+
+#define I2C_MASTER_NUM I2C_NUM_0       // or I2C_NUM_1
+#define I2C_MASTER_SDA_IO 21           // Set to your actual SDA pin
+#define I2C_MASTER_SCL_IO 22           // Set to your actual SCL pin
+#define I2C_MASTER_FREQ_HZ 100000      // Standard I2C speed
+#define I2C_MASTER_TX_BUF_DISABLE 0
+#define I2C_MASTER_RX_BUF_DISABLE 0
+
+esp_err_t i2c_master_init(void) {
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C_MASTER_FREQ_HZ,
+    };
+    esp_err_t err = i2c_param_config(I2C_MASTER_NUM, &conf);
+    if (err != ESP_OK) return err;
+    return i2c_driver_install(I2C_MASTER_NUM, conf.mode,
+                              I2C_MASTER_RX_BUF_DISABLE,
+                              I2C_MASTER_TX_BUF_DISABLE, 0);
+}
+
+// 8-bit I2C address = (7-bit address << 1)
+// Example: TM1650 digit0 addr = 0x34 → write addr = 0x68
+esp_err_t i2c_write(uint8_t addr_8bit, uint8_t data) {
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, addr_8bit, true);     // Send slave address
+    i2c_master_write_byte(cmd, data, true);          // Send data
+    i2c_master_stop(cmd);
+    esp_err_t err = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, pdMS_TO_TICKS(1000));
+    i2c_cmd_link_delete(cmd);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "I2C write failed: %s", esp_err_to_name(err));
+    }
+    return err;
 }
 
 #define X(sname, name, code) static void fun_ ## name(void) { code; }
