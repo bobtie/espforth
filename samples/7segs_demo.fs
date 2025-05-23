@@ -1,3 +1,4 @@
+    \ connect 7seg's clk/dio with esp32's SCL/SDA
     \ i2c_master_init();
 
     \ // Turn display on, brightness max
