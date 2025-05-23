@@ -34,6 +34,8 @@
 #  include "esp_system.h"
 #  include "driver/uart.h"
 #  include "driver/i2c.h"
+#  include "driver/adc.h"
+#  include "esp_adc/adc_oneshot.h"
 #else
 #  include <termios.h>
 #  include <unistd.h>
@@ -222,6 +224,8 @@ mode_t umask(mode_t v) {
   X("PINMODE", PINMODE, WP = top; pop; set_pin_direction(WP, top); pop) \
   X("PINSET", SETPIN, WP = top; pop; set_pin_level(WP, top); pop) \
   X("PINGET", GETPIN, top = get_pin_level(top)) \
+  X("ADC-INIT", ADCINIT, adc_init(top); pop) \
+  X("ADC-READ", ADCREAD, top = adc_read(top)) \
   X("DUTY", DUTY, WP = top; pop; /* ledcAnalogWrite(WP,top,255); */ pop) \
   X("FREQ", FREQ, WP = top; pop; /* ledcSetup(WP,top,13); */ pop) \
   X("MS", MS, WP = top; pop; mspause(WP)) \
@@ -415,6 +419,34 @@ static cell_t get_pin_level(int p) {
      return gpio_get_level(p);
   #endif
 }
+
+static adc_oneshot_unit_handle_t adc1_handle;
+
+// --------------------------------------
+static void adc_init(int channel) {
+
+    
+    adc_oneshot_unit_init_cfg_t init_config = {
+        .unit_id = ADC_UNIT_1,
+    };
+    adc_oneshot_new_unit(&init_config, &adc1_handle);
+
+    adc_oneshot_chan_cfg_t config = {
+        .bitwidth = ADC_BITWIDTH_DEFAULT,
+        .atten = ADC_ATTEN_DB_11, // for 0 - 3.6V range
+    };
+    adc_oneshot_config_channel(adc1_handle, channel, &config);
+
+  }
+
+int adc_read(int channel) {
+        int raw;
+        adc_oneshot_read(adc1_handle, channel, &raw);
+        return raw;
+}
+
+
+// --------------------------------------
 
 static void mspause(cell_t ms) {
 #ifdef esp32
