@@ -367,7 +367,8 @@ static void mspause(cell_t ms)
 }
 
 static void fun_NOP(void) { next(); }
-static void fun_ACCEPT(void) { top = duplexread(cData, top); }
+// static void fun_ACCEPT(void) { top = duplexread(cData, top); }
+static void fun_ACCEPT(void) { WP=top; top=stack[(unsigned char)S--]; top = duplexread(cData+top, WP); S--;}
 static void fun_QKEY(void)
 {
      stack[(unsigned char)++S] = top, top = qrx();
