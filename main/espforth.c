@@ -33,6 +33,9 @@
 #  include "esp_vfs_fat.h"
 #  include "esp_system.h"
 #  include "driver/uart.h"
+#  include "driver/i2c.h"
+#  include "driver/adc.h"
+#  include "esp_adc/adc_oneshot.h"
 #else
 #  include <termios.h>
 #  include <unistd.h>
@@ -208,7 +211,11 @@ mode_t umask(mode_t v) {
   X("DOVAR", DOVAR, push WP) \
   X("MAX", MAX, if (top < stack[(unsigned char)S]) pop; else S--) \
   X("MIN", MIN, if (top < stack[(unsigned char)S]) S--; else pop) \
-  X("TONE", TONE, WP=top; pop; /* ledcWriteTone(WP,top); */ pop) \
+  X("TONE-INIT", TONEINIT, WP=top; pop; ledcWriteTone(WP,top); pop) \ 
+  X("TONE-FREQ", TONEFREQ, WP=top; pop; ledChangeTone(WP) ) \
+  X("TONE-STATE", TONESTATE, WP=top; pop; ledToneState(WP) ) \
+  X("I2C-M-INIT", I2CMINIT, top=i2c_master_init()) \
+  X("I2C-M-WRITE", I2CMWRITE, WP=top; pop; top=i2c_write(WP,top)) \
   X("sendPacket", sendPacket, ) \
   X("POKE", POKE, Pointer = (cell_t*)top; \
     *Pointer = stack[(unsigned char)S--]; pop) \
@@ -217,6 +224,8 @@ mode_t umask(mode_t v) {
   X("PINMODE", PINMODE, WP = top; pop; set_pin_direction(WP, top); pop) \
   X("PINSET", SETPIN, WP = top; pop; set_pin_level(WP, top); pop) \
   X("PINGET", GETPIN, top = get_pin_level(top)) \
+  X("ADC-INIT", ADCINIT, adc_init(top); pop) \
+  X("ADC-READ", ADCREAD, top = adc_read(top)) \
   X("DUTY", DUTY, WP = top; pop; /* ledcAnalogWrite(WP,top,255); */ pop) \
   X("FREQ", FREQ, WP = top; pop; /* ledcSetup(WP,top,13); */ pop) \
   X("MS", MS, WP = top; pop; mspause(WP)) \
@@ -398,6 +407,7 @@ static int duplexread(unsigned char* dst, int sz) {
 }
 
 static void set_pin_direction(int p, int m) {
+  /* m = 1 for input, m = 2 for output*/
 #ifdef esp32
    gpio_reset_pin(p);
    gpio_set_direction(p, m);
@@ -416,12 +426,137 @@ static cell_t get_pin_level(int p) {
   #endif
 }
 
+static adc_oneshot_unit_handle_t adc1_handle;
+
+// --------------------------------------
+static void adc_init(int channel) {
+
+    
+    adc_oneshot_unit_init_cfg_t init_config = {
+        .unit_id = ADC_UNIT_1,
+    };
+    adc_oneshot_new_unit(&init_config, &adc1_handle);
+
+    adc_oneshot_chan_cfg_t config = {
+        .bitwidth = ADC_BITWIDTH_DEFAULT,
+        .atten = ADC_ATTEN_DB_11, // for 0 - 3.6V range
+    };
+    adc_oneshot_config_channel(adc1_handle, channel, &config);
+
+  }
+
+int adc_read(int channel) {
+        int raw;
+        adc_oneshot_read(adc1_handle, channel, &raw);
+        return raw;
+}
+
+
+// --------------------------------------
+
 static void mspause(cell_t ms) {
 #ifdef esp32
   vTaskDelay(ms / portTICK_PERIOD_MS);
 #else
   usleep(ms * 1000);
 #endif
+}
+
+
+
+#define PWM_GPIO        18      // GPIO pin for PWM
+#define PWM_FREQ_HZ     440    // Frequency in Hertz
+#define PWM_DUTY_RES    LEDC_TIMER_8_BIT // 8-bit resolution (0-255)
+#define PWM_DUTY        128     // 50% duty cycle (128 out of 255)
+#define PWM_TIMER       LEDC_TIMER_0
+#define PWM_MODE        LEDC_HIGH_SPEED_MODE
+#define PWM_CHANNEL     LEDC_CHANNEL_0
+
+void ledToneState(int s)
+{
+    if (s == 0) {
+      ledc_timer_pause(PWM_MODE, PWM_TIMER);
+    } else {
+      ledc_timer_resume(PWM_MODE, PWM_TIMER);
+    }
+
+}
+
+void ledChangeTone(int freq)
+{
+    ledc_set_freq(PWM_MODE, PWM_TIMER, freq);
+}
+
+void ledcWriteTone(int pin, int freq)
+{
+    // printf("ledcWriteTone, freq: %d, pin: %d\n", freq, pin);
+    // Configure the PWM timer
+    ledc_timer_config_t ledc_timer = {
+        .speed_mode       = PWM_MODE,
+        .timer_num        = PWM_TIMER,
+        .duty_resolution  = PWM_DUTY_RES,
+        .freq_hz          = freq,
+        .clk_cfg          = LEDC_AUTO_CLK
+    };
+
+    ledc_timer_config(&ledc_timer);
+
+    ledc_timer_pause(PWM_MODE, PWM_TIMER);
+
+    // Configure the PWM channel
+    ledc_channel_config_t ledc_channel = {
+        .speed_mode     = PWM_MODE,
+        .channel        = PWM_CHANNEL,
+        .timer_sel      = PWM_TIMER,
+        .intr_type      = LEDC_INTR_DISABLE,
+        .gpio_num       = pin,
+        .duty           = PWM_DUTY,
+        .hpoint         = 0
+    };
+
+    ledc_channel_config(&ledc_channel);
+
+}
+
+// ---- i2c control
+
+#define I2C_MASTER_NUM I2C_NUM_0       // or I2C_NUM_1
+#define I2C_MASTER_SDA_IO 21           // Set to your actual SDA pin
+#define I2C_MASTER_SCL_IO 22           // Set to your actual SCL pin
+#define I2C_MASTER_FREQ_HZ 100000      // Standard I2C speed
+#define I2C_MASTER_TX_BUF_DISABLE 0
+#define I2C_MASTER_RX_BUF_DISABLE 0
+
+esp_err_t i2c_master_init(void) {
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C_MASTER_FREQ_HZ,
+    };
+    esp_err_t err = i2c_param_config(I2C_MASTER_NUM, &conf);
+    if (err != ESP_OK) return err;
+    return i2c_driver_install(I2C_MASTER_NUM, conf.mode,
+                              I2C_MASTER_RX_BUF_DISABLE,
+                              I2C_MASTER_TX_BUF_DISABLE, 0);
+}
+
+// 8-bit I2C address = (7-bit address << 1)
+// Example: TM1650 digit0 addr = 0x34 → write addr = 0x68
+esp_err_t i2c_write(uint8_t addr_8bit, uint8_t data) {
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, addr_8bit, true);     // Send slave address
+    i2c_master_write_byte(cmd, data, true);          // Send data
+    i2c_master_stop(cmd);
+    esp_err_t err = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, pdMS_TO_TICKS(1000));
+    i2c_cmd_link_delete(cmd);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "I2C write failed: %s", esp_err_to_name(err));
+    }
+    return err;
 }
 
 #define X(sname, name, code) static void fun_ ## name(void) { code; }
@@ -820,7 +955,7 @@ int main(void) {
   COLON("FORGET", TOKEN,NAMEQ,QDUP,IF,
     CELLM,DUP,CP,STORE,AT,DUP,CONTEXT,STORE,LAST,STORE,DROP,EXIT,THEN,
     ERRORR,EXIT);
-  int BOOT=COLON("BOOT", STRQ,BOOT_PATH,COUNT,R_O,OPEN_FILE,IF,DROP,ELSE,
+  int BOOT=COLON("BOOT", STRQ,BOOT_PATH,COUNT,R_O,OPEN_FILE,IF,DROP,DOTQ, "file not found:", DOTQ, BOOT_PATH, CR,ELSE,
     FIB,SWAP,DOLIT,NFIB,AT,SWAP,READ_FILE,
     IF,DROP,ELSE,FIB,SWAP,LOAD,THEN,THEN,EXIT);
   COLD=COLON("COLD",
