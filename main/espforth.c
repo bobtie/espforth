@@ -97,9 +97,13 @@ mode_t umask(mode_t v) {
 // }
 // #endif
 
+ // { WP=top; top=stack[(unsigned char)S--]; top = duplexread(cData+top, WP); S--;}
+
+// X("ACCEPT", ACCEPT, top = duplexread(cData, top)) 
+
 #define PRIMITIVE_LIST \
   X("NOP", NOP, next()) \
-  X("ACCEPT", ACCEPT, top = duplexread(cData, top)) \
+  X("ACCEPT", ACCEPT, WP=top; top=stack[(unsigned char)S--]; pop; push duplexread(cData+top, WP)) \
   X("?KEY", QKEY, push qrx(); if (top >= 0) push -1; else top = 0) \
   X("EMIT", EMIT, char c=top; fputc(c, stdout); pop) \
   X("DOCON", DOCON, push data[WP/sizeof(cell_t)]) \
@@ -397,6 +401,7 @@ static int duplexread(unsigned char* dst, int sz) {
     }
     dst[len++] = ch;
   }
+  // printf("duplexread, len=%d\n", len);
   return len;
 }
 
@@ -951,6 +956,9 @@ int main(void) {
     IF,DROP,ELSE,FIB,SWAP,LOAD,THEN,THEN,EXIT);
   COLD=COLON("COLD",
     BOOT,DOTQ,"AIBOT ESP32 Forth",CR,BEGIN,QUIT,AGAIN,EXIT);
+
+  // ---- ESP32 WORDS
+  
   int LINE=COLON("LINE",
     DOLIT,0x7,FOR,DUP,PEEK,DOLIT,0x9,UDOTR,CELLP,NEXT,EXIT);
   int PP=COLON("PP",
@@ -977,6 +985,9 @@ int main(void) {
   COLON("PPPP", FOR,AFT,CR,DUP,DUP,DOLIT,0x9,UDOTR,SPACE,LINE,
     SWAP,TYPEE,THEN,NEXT,EXIT);
   COLON("KKK", DOLIT,0x3FF59000,DOLIT,0x10,PP,DROP,EXIT);
+
+  // ---- 
+
   int THENN=COLON_IMMEDIATE("THEN", HERE,SWAP,STORE,EXIT);
   COLON_IMMEDIATE("FOR", COMPI,TOR,HERE,EXIT);
   COLON_IMMEDIATE("BEGIN", HERE,EXIT);
