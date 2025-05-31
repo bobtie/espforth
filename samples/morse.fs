@@ -1,24 +1,30 @@
 880 18 TONE-INIT
-100 constant DOT-TIME
+VARIABLE DOT-TIME
+
+100 DOT-TIME !
+
+: ACTION
+    TONE-STATE 
+;
 
 : DS \ dot space
-    DOT-TIME MS 
+    DOT-TIME @ MS 
 ;
 
 : LS \ letter space
-    DOT-TIME 2 * MS 
+    DS DS 
 ;
 
 : WS \ word space
-    DOT-TIME 2 * MS 
+    DS DS DS DS
 ;
 
 : DOT 
-    1 TONE-STATE DS 0 TONE-STATE DS
+    1 ACTION DS 0 ACTION DS
 ;
 
 : LINE 
-    1 TONE-STATE DS DS DS 0 TONE-STATE DS
+    1 ACTION DS DS DS 0 ACTION DS
 ;
 
 : SOS  DOT DOT DOT LS LINE LINE LINE LS DOT DOT DOT WS
@@ -51,7 +57,19 @@
 : Y LINE DOT LINE LINE LS ;
 : Z LINE LINE DOT DOT LS ;
 
+VARIABLE CODES  ' A , ' B , ' C , ' D , ' E , ' F , ' G , ' H , ' I , ' J , ' K , ' L , ' M , ' N , ' O , ' P , ' Q , ' R , ' S , ' T , ' U , ' V , ' W , ' X , ' Y , ' Z ,
 
-: DEMO
+
+: DEMO1
     R O B E R T O
 ;
+
+: DEMO2
+    24 FOR 24 R@ - 1+ CELLS CODES + @ EXECUTE NEXT
+;
+
+: HELP
+    CR CR ." morse example ver. 1.7" CR CR
+;
+
+HELP
