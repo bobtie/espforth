@@ -20,4 +20,5 @@ configure_file(
 )
 
 fatfs_create_spiflash_image(storage ${FS_BUILD_DIR} FLASH_IN_PROJECT)
+endif()
 
