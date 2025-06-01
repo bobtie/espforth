@@ -25,3 +25,6 @@ rm "$HEAD_FILE" "$TAIL_FILE"
 
 echo "Processed file saved as $PREPROCESSED_FILE"
 
+clang-format -i $PREPROCESSED_FILE
+
+echo "Reformatted file saved as $PREPROCESSED_FILE"
