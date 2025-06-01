@@ -43,7 +43,7 @@
 
 static const char* TAG = "espforth";
 
-#define DEBUG_CORE_WORDS 1
+#define DEBUG_CORE_WORDS 0
 #define FILE_BUFFER_SIZE 0x4000
 
 typedef intptr_t cell_t;
