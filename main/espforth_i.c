@@ -46,6 +46,10 @@
 #define log(...)
 #endif
 
+#define OLD_ACCEPT
+#define TRACE_EXECUTION
+#define ABORT_IF_UNDERFLOW 1
+
 static const char *TAG = "espforth";
 
 typedef intptr_t cell_t;
@@ -56,6 +60,18 @@ typedef __uint128_t udcell_t;
 
 static cell_t rack[256] = {0}, stack[256] = {0};
 static unsigned char R = 0, S = 0;
+
+int Smm() {
+     unsigned char x = S--;
+
+     if (x == 0 && ABORT_IF_UNDERFLOW) {
+          printf("stack underflow\n");
+          abort();
+     }
+
+     return x;
+}
+
 static cell_t *Pointer;
 static cell_t P, IP, WP, top, links;
 static dcell_t d, n, m;
@@ -367,8 +383,12 @@ static void mspause(cell_t ms)
 }
 
 static void fun_NOP(void) { next(); }
-// static void fun_ACCEPT(void) { top = duplexread(cData, top); }
-static void fun_ACCEPT(void) { WP=top; top=stack[(unsigned char)S--]; top = duplexread(cData+top, WP); S--;}
+
+#ifdef OLD_ACCEPT
+static void fun_ACCEPT(void) { top = duplexread(cData, top); }
+#else
+static void fun_ACCEPT(void) { WP=top; top=stack[(unsigned char)Smm()]; top = duplexread(cData+top, WP);}
+#endif 
 static void fun_QKEY(void)
 {
      stack[(unsigned char)++S] = top, top = qrx();
@@ -385,7 +405,7 @@ static void fun_EMIT(void)
            stdout
 
      );
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
 }
 static void fun_DOCON(void) { stack[(unsigned char)++S] = top, top = data[WP / sizeof(cell_t)]; }
 static void fun_DOLIT(void)
@@ -404,12 +424,20 @@ static void fun_EXIT(void)
 {
      IP = (cell_t)rack[(unsigned char)R--];
      next();
+     #ifdef DUMP_STACK
+     printf("\nexit, top=%ld, S=%d, ",top,S);
+     for(int s = S; s>=0; s--) {
+          printf("s[%d]=%ld, ",s,stack[s]);
+     }
+
+     printf("\n");
+     #endif
 }
 static void fun_EXECUTE(void)
 {
      P = top;
      WP = P + sizeof(cell_t);
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
 }
 static void fun_DONEXT(void)
 {
@@ -425,7 +453,7 @@ static void fun_QBRANCH(void)
           IP = data[IP / sizeof(cell_t)];
      else
           IP += sizeof(cell_t);
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      next();
 }
 static void fun_BRANCH(void)
@@ -435,14 +463,14 @@ static void fun_BRANCH(void)
 }
 static void fun_STORE(void)
 {
-     data[top / sizeof(cell_t)] = stack[(unsigned char)S--];
-     top = stack[(unsigned char)S--];
+     data[top / sizeof(cell_t)] = stack[(unsigned char)Smm()];
+     top = stack[(unsigned char)Smm()];
 }
 static void fun_AT(void) { top = data[top / sizeof(cell_t)]; }
 static void fun_CSTORE(void)
 {
-     cData[top] = (unsigned char)stack[(unsigned char)S--];
-     top = stack[(unsigned char)S--];
+     cData[top] = (unsigned char)stack[(unsigned char)Smm()];
+     top = stack[(unsigned char)Smm()];
 }
 static void fun_CAT(void) { top = (cell_t)cData[top]; }
 static void fun_RPAT(void) { ; }
@@ -452,11 +480,11 @@ static void fun_RAT(void) { stack[(unsigned char)++S] = top, top = rack[(unsigne
 static void fun_TOR(void)
 {
      rack[(unsigned char)++R] = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
 }
 static void fun_SPAT(void) { ; }
 static void fun_SPSTO(void) { ; }
-static void fun_DROP(void) { top = stack[(unsigned char)S--]; }
+static void fun_DROP(void) { top = stack[(unsigned char)Smm()]; }
 static void fun_DUP(void) { stack[(unsigned char)++S] = top; }
 static void fun_SWAP(void)
 {
@@ -466,9 +494,9 @@ static void fun_SWAP(void)
 }
 static void fun_OVER(void) { stack[(unsigned char)++S] = top, top = stack[(unsigned char)(S - 1)]; }
 static void fun_ZLESS(void) { top = (top < 0) ? -1 : 0; }
-static void fun_AND(void) { top &= stack[(unsigned char)S--]; }
-static void fun_OR(void) { top |= stack[(unsigned char)S--]; }
-static void fun_XOR(void) { top ^= stack[(unsigned char)S--]; }
+static void fun_AND(void) { top &= stack[(unsigned char)Smm()]; }
+static void fun_OR(void) { top |= stack[(unsigned char)Smm()]; }
+static void fun_XOR(void) { top ^= stack[(unsigned char)Smm()]; }
 static void fun_UPLUS(void)
 {
      stack[(unsigned char)S] += top;
@@ -497,7 +525,7 @@ static void fun_DDUP(void)
      fun_OVER();
      fun_OVER();
 }
-static void fun_PLUS(void) { top += stack[(unsigned char)S--]; }
+static void fun_PLUS(void) { top += stack[(unsigned char)Smm()]; }
 static void fun_INVERSE(void) { top = -top - 1; }
 static void fun_NEGATE(void) { top = 0 - top; }
 static void fun_DNEGATE(void)
@@ -510,26 +538,26 @@ static void fun_DNEGATE(void)
      fun_RFROM();
      fun_PLUS();
 }
-static void fun_SUB(void) { top = stack[(unsigned char)S--] - top; }
+static void fun_SUB(void) { top = stack[(unsigned char)Smm()] - top; }
 static void fun_ABS(void)
 {
      if (top < 0)
           top = -top;
 }
-static void fun_EQUAL(void) { top = (stack[(unsigned char)S--] == top) ? -1 : 0; }
+static void fun_EQUAL(void) { top = (stack[(unsigned char)Smm()] == top) ? -1 : 0; }
 static void fun_ULESS(void)
 {
      top = ((ucell_t)(stack[(unsigned char)S]) < (ucell_t)(top)) ? -1 : 0;
-     S--;
+     Smm();
 }
-static void fun_LESS(void) { top = (stack[(unsigned char)S--] < top) ? -1 : 0; }
+static void fun_LESS(void) { top = (stack[(unsigned char)Smm()] < top) ? -1 : 0; }
 static void fun_UMMOD(void)
 {
      d = (udcell_t)((ucell_t)top);
      m = (udcell_t)((ucell_t)stack[(unsigned char)S]);
      n = (udcell_t)((ucell_t)stack[(unsigned char)(S - 1)]);
      n += m << (sizeof(cell_t) * 8);
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      if (d == 0)
           (top = 0, stack[S] = 0);
      else
@@ -541,7 +569,7 @@ static void fun_MSMOD(void)
      m = (dcell_t)((cell_t)stack[(unsigned char)S]);
      n = (dcell_t)((cell_t)stack[(unsigned char)S - 1]);
      n += m << (sizeof(cell_t) * 8);
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      if (d == 0)
           (top = 0, stack[S] = 0);
      else
@@ -552,8 +580,8 @@ static void fun_SLMOD(void)
      if (top != 0)
           (WP = stack[(unsigned char)S] / top, stack[(unsigned char)S] %= top, top = WP);
 }
-static void fun_MOD(void) { top = (top) ? stack[(unsigned char)S--] % top : stack[(unsigned char)S--]; }
-static void fun_SLASH(void) { top = (top) ? stack[(unsigned char)S--] / top : (S--, 0); }
+static void fun_MOD(void) { top = (top) ? stack[(unsigned char)Smm()] % top : stack[(unsigned char)Smm()]; }
+static void fun_SLASH(void) { top = (top) ? stack[(unsigned char)Smm()] / top : (Smm(), 0); }
 static void fun_UMSTA(void)
 {
      d = (udcell_t)top;
@@ -562,7 +590,7 @@ static void fun_UMSTA(void)
      top = (ucell_t)(m >> (sizeof(cell_t) * 8));
      stack[(unsigned char)S] = (ucell_t)m;
 }
-static void fun_STAR(void) { top *= stack[(unsigned char)S--]; }
+static void fun_STAR(void) { top *= stack[(unsigned char)Smm()]; }
 static void fun_MSTAR(void)
 {
      d = (dcell_t)top;
@@ -577,7 +605,7 @@ static void fun_SSMOD(void)
      m = (dcell_t)stack[(unsigned char)S];
      n = (dcell_t)stack[(unsigned char)(S - 1)];
      n *= m;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      top = (cell_t)(n / d);
      stack[(unsigned char)S] = (cell_t)(n % d);
 }
@@ -587,21 +615,21 @@ static void fun_STASL(void)
      m = (dcell_t)stack[(unsigned char)S];
      n = (dcell_t)stack[(unsigned char)(S - 1)];
      n *= m;
-     top = stack[(unsigned char)S--];
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
+     top = stack[(unsigned char)Smm()];
      top = (cell_t)(n / d);
 }
 static void fun_PICK(void) { top = stack[(unsigned char)(S - top)]; }
 static void fun_PSTORE(void)
 {
-     data[top / sizeof(cell_t)] += stack[(unsigned char)S--];
-     top = stack[(unsigned char)S--];
+     data[top / sizeof(cell_t)] += stack[(unsigned char)Smm()];
+     top = stack[(unsigned char)Smm()];
 }
 static void fun_DSTORE(void)
 {
-     data[(top / sizeof(cell_t)) + 1] = stack[(unsigned char)S--];
-     data[top / sizeof(cell_t)] = stack[(unsigned char)S--];
-     top = stack[(unsigned char)S--];
+     data[(top / sizeof(cell_t)) + 1] = stack[(unsigned char)Smm()];
+     data[top / sizeof(cell_t)] = stack[(unsigned char)Smm()];
+     top = stack[(unsigned char)Smm()];
 }
 static void fun_DAT(void)
 {
@@ -617,29 +645,29 @@ static void fun_DOVAR(void) { stack[(unsigned char)++S] = top, top = WP; }
 static void fun_MAX(void)
 {
      if (top < stack[(unsigned char)S])
-          top = stack[(unsigned char)S--];
+          top = stack[(unsigned char)Smm()];
      else
-          S--;
+          Smm();
 }
 static void fun_MIN(void)
 {
      if (top < stack[(unsigned char)S])
-          S--;
+          Smm();
      else
-          top = stack[(unsigned char)S--];
+          top = stack[(unsigned char)Smm()];
 }
 static void fun_TONE(void)
 {
      WP = top;
-     top = stack[(unsigned char)S--];
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
+     top = stack[(unsigned char)Smm()];
 }
 static void fun_sendPacket(void) { ; }
 static void fun_POKE(void)
 {
      Pointer = (cell_t *)top;
-     *Pointer = stack[(unsigned char)S--];
-     top = stack[(unsigned char)S--];
+     *Pointer = stack[(unsigned char)Smm()];
+     top = stack[(unsigned char)Smm()];
 }
 static void fun_PEEK(void)
 {
@@ -650,26 +678,26 @@ static void fun_ADC(void) { top = (cell_t)0; }
 static void fun_PIN(void)
 {
      WP = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      setpin(WP, top);
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
 }
 static void fun_DUTY(void)
 {
      WP = top;
-     top = stack[(unsigned char)S--];
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
+     top = stack[(unsigned char)Smm()];
 }
 static void fun_FREQ(void)
 {
      WP = top;
-     top = stack[(unsigned char)S--];
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
+     top = stack[(unsigned char)Smm()];
 }
 static void fun_MS(void)
 {
      WP = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      mspause(WP);
 }
 static void fun_TERMINATE(void) { exit(top); }
@@ -701,9 +729,9 @@ static void fun_CLOSE_FILE(void)
 static void fun_OPEN_FILE(void)
 {
      cell_t mode = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      cell_t len = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      memcpy(filename, &cData[top], len);
      filename[len] = 0;
      mode_t mask = umask(0);
@@ -718,9 +746,9 @@ static void fun_OPEN_FILE(void)
 static void fun_CREATE_FILE(void)
 {
      cell_t mode = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      cell_t len = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      memcpy(filename, &cData[top], len);
      filename[len] = 0;
      top = open(filename, mode |
@@ -741,7 +769,7 @@ static void fun_CREATE_FILE(void)
 static void fun_DELETE_FILE(void)
 {
      cell_t len = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      memcpy(filename, &cData[top], len);
      filename[len] = 0;
      top = unlink(filename);
@@ -754,9 +782,9 @@ static void fun_DELETE_FILE(void)
 static void fun_WRITE_FILE(void)
 {
      cell_t fd = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      cell_t len = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      top = write(fd, &cData[top], len);
      top = top != len ?
 
@@ -767,9 +795,9 @@ static void fun_WRITE_FILE(void)
 static void fun_READ_FILE(void)
 {
      cell_t fd = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      cell_t len = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      log("fun_READ_FILE, fd=%ld, address=%ld, len=%ld\n",fd,top,len);
      top = read(fd, &cData[top], len);
      log("fun_READ_FILE, read=%ld\n",top);
@@ -795,7 +823,7 @@ static void fun_FILE_POSITION(void)
 static void fun_REPOSITION_FILE(void)
 {
      cell_t fd = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      top = (cell_t)lseek(fd, top,
 
                          0
@@ -810,7 +838,7 @@ static void fun_REPOSITION_FILE(void)
 static void fun_RESIZE_FILE(void)
 {
      cell_t fd = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
      top = ftruncate(fd, top);
      top = top < 0 ?
 
@@ -832,10 +860,10 @@ static void fun_FILE_SIZE(void)
 
 static void fun_DUMP1(void) {
      cell_t nchar = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
 
      cell_t addr = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
 
      for (cell_t i = 0; i< nchar; i++) {
           printf("'%c' %x ", cData[addr+i],cData[addr+i]);
@@ -853,10 +881,10 @@ static void fun_DUMP1(void) {
 
 static void fun_DUMP(void) {
      cell_t nchar = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
 
      cell_t addr = top;
-     top = stack[(unsigned char)S--];
+     top = stack[(unsigned char)Smm()];
 
     size_t i, j;
 
@@ -1375,15 +1403,31 @@ static void SET_VAR(cell_t addr, cell_t value)
      data[addr / sizeof(cell_t) + 1] = value;
 }
 
+static int call_levels = 0;
+
 static void run()
 {
      P = COLD;
      WP = P + sizeof(cell_t);
      for (;;)
      {
-          // int lastP = P;
+          int lastP = P;
           unsigned char bytecode = cData[P++];
-          // printf("executing at: %ul, bytecode: %d\n",lastP,bytecode);
+          #ifdef TRACE_EXECUTION
+          printf("\n%3d: executing at: %u, bytecode: %d, name: ",call_levels,lastP,bytecode);
+          // int len = 0x1f & cData[P-9];
+          for (int i=8; i >= 0; i--) {
+               printf("%c",cData[P-i]);
+          }
+          printf("\n");
+          if (bytecode == as_DOLIST) {
+               call_levels++;
+          } else if (bytecode == as_EXIT)
+          {
+               call_levels--;
+          }
+          
+          #endif
           primitives[bytecode]();
      }
 }
@@ -1760,7 +1804,11 @@ int main(int argc, const char * argv[])
      int BOOT = COLON_WITH_FLAGS(0, "BOOT", STRQ, fname, COUNT, INCLUDE, EXIT)
 
          ;
-     COLD = COLON_WITH_FLAGS(0, "COLD", BOOT, DOTQ, "AIBOT ESP32 Forth", CR, BEGIN, QUIT, AGAIN, EXIT);
+     
+     // COLD = COLON_WITH_FLAGS(0, "COLD", BOOT, DOTQ, "AIBOT ESP32 Forth", CR, BEGIN, QUIT, AGAIN, EXIT);
+
+     COLD = COLON_WITH_FLAGS(0, "COLD", BEGIN, QUIT, AGAIN, EXIT);
+     
      int LINE = COLON_WITH_FLAGS(0, "LINE", DOLIT, 0x7, FOR, DUP, PEEK, DOLIT, 0x9, UDOTR, CELLP, NEXT, EXIT);
      int PP = COLON_WITH_FLAGS(0, "PP", FOR, AFT, CR, DUP, DOLIT, 0x9, UDOTR, SPACE, LINE, THEN, NEXT, EXIT);
      COLON_WITH_FLAGS(0, "P0", DOLIT, 0x3FF44004, POKE, EXIT);
@@ -1817,6 +1865,8 @@ int main(int argc, const char * argv[])
      // log("ready to run\n");
 
      // dump_data(IP/sizeof(cell_t));
+
+     // printf("SPAT=%d\n",SPAT); exit(1);
 
      run();
 }
