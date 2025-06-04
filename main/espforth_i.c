@@ -47,7 +47,7 @@
 #endif
 
 #define OLD_ACCEPT
-#define TRACE_EXECUTION
+// #define TRACE_EXECUTION
 #define ABORT_IF_UNDERFLOW 1
 
 static const char *TAG = "espforth";
@@ -1109,6 +1109,104 @@ enum
 
 };
 
+const char * code_name(int code) {
+     switch(code) {
+     case as_UNKNOWN: return "UNKNOWN";
+     case as_NOP: return "NOP";
+     case as_ACCEPT: return "ACCEPT";
+     case as_QKEY: return "QKEY";
+     case as_EMIT: return "EMIT";
+     case as_DOCON: return "DOCON";
+     case as_DOLIT: return "DOLIT";
+     case as_DOLIST: return "DOLIST";
+     case as_EXIT: return "EXIT";
+     case as_EXECUTE: return "EXECUTE";
+     case as_DONEXT: return "DONEXT";
+     case as_QBRANCH: return "QBRANCH";
+     case as_BRANCH: return "BRANCH";
+     case as_STORE: return "STORE";
+     case as_AT: return "AT";
+     case as_CSTORE: return "CSTORE";
+     case as_CAT: return "CAT";
+     case as_RPAT: return "RPAT";
+     case as_RPSTO: return "RPSTO";
+     case as_RFROM: return "RFROM";
+     case as_RAT: return "RAT";
+     case as_TOR: return "TOR";
+     case as_SPAT: return "SPAT";
+     case as_SPSTO: return "SPSTO";
+     case as_DROP: return "DROP";
+     case as_DUP: return "DUP";
+     case as_SWAP: return "SWAP";
+     case as_OVER: return "OVER";
+     case as_ZLESS: return "ZLESS";
+     case as_AND: return "AND";
+     case as_OR: return "OR";
+     case as_XOR: return "XOR";
+     case as_UPLUS: return "UPLUS";
+     case as_NEXTT: return "NEXTT";
+     case as_QDUP: return "QDUP";
+     case as_ROT: return "ROT";
+     case as_DDROP: return "DDROP";
+     case as_DDUP: return "DDUP";
+     case as_PLUS: return "PLUS";
+     case as_INVERSE: return "INVERSE";
+     case as_NEGATE: return "NEGATE";
+     case as_DNEGATE: return "DNEGATE";
+     case as_SUB: return "SUB";
+     case as_ABS: return "ABS";
+     case as_EQUAL: return "EQUAL";
+     case as_ULESS: return "ULESS";
+     case as_LESS: return "LESS";
+     case as_UMMOD: return "UMMOD";
+     case as_MSMOD: return "MSMOD";
+     case as_SLMOD: return "SLMOD";
+     case as_MOD: return "MOD";
+     case as_SLASH: return "SLASH";
+     case as_UMSTA: return "UMSTA";
+     case as_STAR: return "STAR";
+     case as_MSTAR: return "MSTAR";
+     case as_SSMOD: return "SSMOD";
+     case as_STASL: return "STASL";
+     case as_PICK: return "PICK";
+     case as_PSTORE: return "PSTORE";
+     case as_DSTORE: return "DSTORE";
+     case as_DAT: return "DAT";
+     case as_COUNT: return "COUNT";
+     case as_DOVAR: return "DOVAR";
+     case as_MAX: return "MAX";
+     case as_MIN: return "MIN";
+     case as_TONE: return "TONE";
+     case as_sendPacket: return "sendPacket";
+     case as_POKE: return "POKE";
+     case as_PEEK: return "PEEK";
+     case as_ADC: return "ADC";
+     case as_PIN: return "PIN";
+     case as_DUTY: return "DUTY";
+     case as_FREQ: return "FREQ";
+     case as_MS: return "MS";
+     case as_TERMINATE: return "TERMINATE";
+     case as_R_O: return "R_O";
+     case as_R_W: return "R_W";
+     case as_W_O: return "W_O";
+     case as_BIN: return "BIN";
+     case as_CLOSE_FILE: return "CLOSE_FILE";
+     case as_OPEN_FILE: return "OPEN_FILE";
+     case as_CREATE_FILE: return "CREATE_FILE";
+     case as_DELETE_FILE: return "DELETE_FILE";
+     case as_WRITE_FILE: return "WRITE_FILE";
+     case as_READ_FILE: return "READ_FILE";
+     case as_FILE_POSITION: return "FILE_POSITION";
+     case as_REPOSITION_FILE: return "REPOSITION_FILE";
+     case as_RESIZE_FILE: return "RESIZE_FILE";
+     case as_FILE_SIZE: return "FILE_SIZE";
+
+     }
+
+     return "<<code not mapped>>";
+}
+
+
 int CODE(const char *name, ...)
 {
      log("CODE name: %s\n",name);
@@ -1414,14 +1512,17 @@ static void run()
           int lastP = P;
           unsigned char bytecode = cData[P++];
           #ifdef TRACE_EXECUTION
-          printf("\n%3d: executing at: %u, bytecode: %d, name: ",call_levels,lastP,bytecode);
+          printf("\n%3d: executing at: %u, bytecode: %d, name: %s\n",call_levels,lastP,bytecode, code_name(bytecode));
+
+          if (bytecode == as_DOLIST) {
+               call_levels++;
+               printf("word: ");
           // int len = 0x1f & cData[P-9];
           for (int i=8; i >= 0; i--) {
                printf("%c",cData[P-i]);
           }
           printf("\n");
-          if (bytecode == as_DOLIST) {
-               call_levels++;
+
           } else if (bytecode == as_EXIT)
           {
                call_levels--;
@@ -1759,9 +1860,11 @@ int main(int argc, const char * argv[])
 
          ;
      int LBRAC = COLON_WITH_FLAGS(IMEDD, "[", DOLIT, INTER, TEVAL, STORE, EXIT);
-     int DOTOK = COLON_WITH_FLAGS(0, ".OK", CR, DOLIT, INTER, TEVAL, AT, EQUAL, IF, TOR, TOR, TOR, DUP, DOT, RFROM, DUP, DOT, RFROM, DUP, DOT, RFROM, DUP, DOT, DOTQ, " ok> ", THEN, EXIT)
+     
+     // the word leverages the circularity of the espforth's data stack. it would do stack underflow is the stack contains less than 4 elemens
+     COLON_WITH_FLAGS(0, ".OK1", CR, DOLIT, INTER, TEVAL, AT, EQUAL, IF, TOR, TOR, TOR, DUP, DOT, RFROM, DUP, DOT, RFROM, DUP, DOT, RFROM, DUP, DOT, DOTQ, " ok> ", THEN, EXIT);
+     int DOTOK = COLON_WITH_FLAGS(0, ".OK", CR, DOTQ, "ok> ", EXIT);
 
-         ;
      int EVAL = COLON_WITH_FLAGS(0, "EVAL", LBRAC, BEGIN, TOKEN, DUP, AT, WHILE, TEVAL, ATEXE, REPEAT, DROP, NOP, EXIT);
      int QUIT = COLON_WITH_FLAGS(0, "QUIT", LBRAC, BEGIN, DOTOK, QUERY, EVAL, AGAIN, EXIT);
      int LOAD = COLON_WITH_FLAGS(0, "LOAD", TTIB, AT, TOR, NTIB, STORE, TTIB, STORE, DOLIT, 0, INN, STORE, EVAL, RFROM, TTIB, STORE, EXIT);
@@ -1805,9 +1908,9 @@ int main(int argc, const char * argv[])
 
          ;
      
-     // COLD = COLON_WITH_FLAGS(0, "COLD", BOOT, DOTQ, "AIBOT ESP32 Forth", CR, BEGIN, QUIT, AGAIN, EXIT);
+     COLD = COLON_WITH_FLAGS(0, "COLD", BOOT, DOTQ, "AIBOT ESP32 Forth", CR, BEGIN, QUIT, AGAIN, EXIT);
 
-     COLD = COLON_WITH_FLAGS(0, "COLD", BEGIN, QUIT, AGAIN, EXIT);
+     // COLD = COLON_WITH_FLAGS(0, "COLD", BEGIN, QUIT, AGAIN, EXIT);
      
      int LINE = COLON_WITH_FLAGS(0, "LINE", DOLIT, 0x7, FOR, DUP, PEEK, DOLIT, 0x9, UDOTR, CELLP, NEXT, EXIT);
      int PP = COLON_WITH_FLAGS(0, "PP", FOR, AFT, CR, DUP, DOLIT, 0x9, UDOTR, SPACE, LINE, THEN, NEXT, EXIT);
