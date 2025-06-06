@@ -46,9 +46,10 @@
 #define log(...)
 #endif
 
-#define OLD_ACCEPT
+// #define OLD_ACCEPT
 // #define TRACE_EXECUTION
-#define ABORT_IF_UNDERFLOW 1
+#define ABORT_IF_UNDERFLOW 0
+#define SIMPLE_DOTOK
 
 static const char *TAG = "espforth";
 
@@ -873,6 +874,25 @@ static void fun_DUMP1(void) {
      }
 }
 
+#ifdef C_DOTK
+static void fun_DOTOK() {
+
+     if (S > 0) {
+          printf("top: %ld ", top);
+     } else {
+          printf("top: n.a. ");
+     }
+
+     for (int i=S; i >= 2; i--) {
+          printf("%ld ",stack[i]);
+     }
+     
+
+     printf(" [%d] ok> ",  S);
+
+}
+#endif
+
 // ----
 
 
@@ -1010,6 +1030,9 @@ static void (*primitives[])(void) = {
     fun_RESIZE_FILE,
     fun_FILE_SIZE,
     fun_DUMP
+    #ifdef C_DOTK
+    , fun_DOTOK
+    #endif
 
 };
 
@@ -1106,6 +1129,9 @@ enum
      as_RESIZE_FILE,
      as_FILE_SIZE,
      as_DUMP
+     #ifdef C_DOTK
+     ,as_DOTOK
+     #endif
 
 };
 
@@ -1200,6 +1226,9 @@ const char * code_name(int code) {
      case as_REPOSITION_FILE: return "REPOSITION_FILE";
      case as_RESIZE_FILE: return "RESIZE_FILE";
      case as_FILE_SIZE: return "FILE_SIZE";
+     #ifdef C_DOTOK
+     case as_DOTOK: return "DOTOK";
+     #endif
 
      }
 
@@ -1530,6 +1559,12 @@ static void run()
           
           #endif
           primitives[bytecode]();
+          #ifdef TRACE_EXECUTION
+          #ifdef C_DOTOK
+          fun_DOTOK();
+          #endif
+          #endif
+
      }
 }
 
@@ -1757,6 +1792,9 @@ int main(int argc, const char * argv[])
      RESIZE_FILE = CODE("resize-file", as_RESIZE_FILE, as_NEXTT);
      FILE_SIZE = CODE("file-size", as_FILE_SIZE, as_NEXTT);
      DUMP = CODE("DUMP",as_DUMP, as_NEXTT);
+     #ifdef C_DOTOK
+     int DOTOK =  CODE("OK", as_DOTOK, as_NEXTT);
+     #endif
 
      int BLANK = CONSTANT("BL", ' ');
      CONSTANT("CELL", sizeof(cell_t));
@@ -1851,8 +1889,9 @@ int main(int argc, const char * argv[])
 
          ;
      int NAMEQ = COLON_WITH_FLAGS(0, "NAME?", CONTEXT, FIND, EXIT);
-     COLON_WITH_FLAGS(0, "EXPECT", ACCEPT, SPAN, STORE, DROP, EXIT);
-     int QUERY = COLON_WITH_FLAGS(0, "QUERY", TIB, DOLIT, 0x100, ACCEPT, NTIB, STORE, DROP, DOLIT, 0, INN, STORE, EXIT);
+
+     COLON_WITH_FLAGS(0, "EXPECT", ACCEPT, SPAN, STORE, EXIT);
+     int QUERY = COLON_WITH_FLAGS(0, "QUERY", TIB, DOLIT, 0x100, ACCEPT, NTIB, STORE, DOLIT, 0, INN, STORE, EXIT);
      int ABORT = COLON_WITH_FLAGS(0, "ABORT", NOP, TABORT, ATEXE, EXIT);
      ABORQP = COLON_WITH_FLAGS(0, "abort\"", IF, DOSTR, COUNT, TYPES, ABORT, THEN, DOSTR, DROP, EXIT);
      int ERRORR = COLON_WITH_FLAGS(0, "ERROR", SPACE, COUNT, TYPES, DOLIT, '?', EMIT, CR, ABORT, EXIT);
@@ -1861,9 +1900,17 @@ int main(int argc, const char * argv[])
          ;
      int LBRAC = COLON_WITH_FLAGS(IMEDD, "[", DOLIT, INTER, TEVAL, STORE, EXIT);
      
+     #ifndef C_DOTOK
+     #ifndef SIMPLE_DOTOK
+     #if ABORT_IF_UNDERFLOW == 1
+     #error "cannot implement this with underflow detection"
+     #endif
      // the word leverages the circularity of the espforth's data stack. it would do stack underflow is the stack contains less than 4 elemens
-     COLON_WITH_FLAGS(0, ".OK1", CR, DOLIT, INTER, TEVAL, AT, EQUAL, IF, TOR, TOR, TOR, DUP, DOT, RFROM, DUP, DOT, RFROM, DUP, DOT, RFROM, DUP, DOT, DOTQ, " ok> ", THEN, EXIT);
+     int DOTOK = COLON_WITH_FLAGS(0, ".OK", CR, DOLIT, INTER, TEVAL, AT, EQUAL, IF, TOR, TOR, TOR, DUP, DOT, RFROM, DUP, DOT, RFROM, DUP, DOT, RFROM, DUP, DOT, DOTQ, " ok> ", THEN, EXIT);     
+     #else
      int DOTOK = COLON_WITH_FLAGS(0, ".OK", CR, DOTQ, "ok> ", EXIT);
+     #endif
+     #endif
 
      int EVAL = COLON_WITH_FLAGS(0, "EVAL", LBRAC, BEGIN, TOKEN, DUP, AT, WHILE, TEVAL, ATEXE, REPEAT, DROP, NOP, EXIT);
      int QUIT = COLON_WITH_FLAGS(0, "QUIT", LBRAC, BEGIN, DOTOK, QUERY, EVAL, AGAIN, EXIT);
