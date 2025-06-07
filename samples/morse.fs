@@ -1,6 +1,8 @@
+\ connect pin 18 with speaker
 880 18 TONE-INIT
 VARIABLE DOT-TIME
 
+\ duration of a symbol, i.e. the beep of a dot
 100 DOT-TIME !
 
 : ACTION
