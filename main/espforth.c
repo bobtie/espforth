@@ -103,7 +103,7 @@ mode_t umask(mode_t v) {
 
 #define PRIMITIVE_LIST \
   X("NOP", NOP, next()) \
-  X("ACCEPT", ACCEPT, WP=top; top=stack[(unsigned char)S--]; pop; push duplexread(cData+top, WP)) \
+  X("ACCEPT", ACCEPT, WP=top; top=stack[(unsigned char)S--]; top = duplexread(cData+top, WP)) \
   X("?KEY", QKEY, push qrx(); if (top >= 0) push -1; else top = 0) \
   X("EMIT", EMIT, char c=top; fputc(c, stdout); pop) \
   X("DOCON", DOCON, push data[WP/sizeof(cell_t)]) \
@@ -896,8 +896,8 @@ int main(void) {
                          WHILE,CELLM,CELLM,REPEAT,
                          RFROM,DROP,SWAP,DROP,CELLM,DUP,NAMET,SWAP,EXIT);
   int NAMEQ=COLON("NAME?", CONTEXT,FIND,EXIT);
-  COLON("EXPECT", ACCEPT,SPAN,STORE,DROP,EXIT);
-  int QUERY=COLON("QUERY", TIB,DOLIT,0x100,ACCEPT,NTIB,STORE,DROP,
+  COLON("EXPECT", ACCEPT,SPAN,STORE,EXIT);
+  int QUERY=COLON("QUERY", TIB,DOLIT,0x100,ACCEPT,NTIB,STORE,
     DOLIT,0,INN,STORE,EXIT);
   int ABORT=COLON("ABORT", NOP,TABORT,ATEXE,EXIT);
   ABORQP=COLON("abort\"", IF,DOSTR,COUNT,TYPES,ABORT,THEN,
