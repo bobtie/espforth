@@ -211,7 +211,7 @@ mode_t umask(mode_t v) {
   X("DOVAR", DOVAR, push WP) \
   X("MAX", MAX, if (top < stack[(unsigned char)S]) pop; else S--) \
   X("MIN", MIN, if (top < stack[(unsigned char)S]) S--; else pop) \
-  X("TONE-INIT", TONEINIT, WP=top; pop; ledcWriteTone(WP,top); pop) \ 
+  X("TONE-INIT", TONEINIT, WP=top; pop; ledcWriteTone(WP,top); pop) \
   X("TONE-FREQ", TONEFREQ, WP=top; pop; ledChangeTone(WP) ) \
   X("TONE-STATE", TONESTATE, WP=top; pop; ledToneState(WP) ) \
   X("I2C-M-INIT", I2CMINIT, top=i2c_master_init()) \
@@ -420,12 +420,14 @@ static cell_t get_pin_level(int p) {
   #endif
 }
 
+#ifdef esp32
 static adc_oneshot_unit_handle_t adc1_handle;
+#endif
 
 // --------------------------------------
 static void adc_init(int channel) {
 
-    
+    #ifdef esp32
     adc_oneshot_unit_init_cfg_t init_config = {
         .unit_id = ADC_UNIT_1,
     };
@@ -436,12 +438,14 @@ static void adc_init(int channel) {
         .atten = ADC_ATTEN_DB_11, // for 0 - 3.6V range
     };
     adc_oneshot_config_channel(adc1_handle, channel, &config);
-
+    #endif
   }
 
 int adc_read(int channel) {
-        int raw;
+        int raw = 0;
+        #ifdef esp32
         adc_oneshot_read(adc1_handle, channel, &raw);
+        #endif
         return raw;
 }
 
@@ -468,23 +472,28 @@ static void mspause(cell_t ms) {
 
 void ledToneState(int s)
 {
+  #ifdef esp32
     if (s == 0) {
       ledc_timer_pause(PWM_MODE, PWM_TIMER);
     } else {
       ledc_timer_resume(PWM_MODE, PWM_TIMER);
     }
-
+  #endif
 }
 
 void ledChangeTone(int freq)
 {
+  #ifdef esp32
     ledc_set_freq(PWM_MODE, PWM_TIMER, freq);
+    #endif
 }
 
 void ledcWriteTone(int pin, int freq)
 {
+
     // printf("ledcWriteTone, freq: %d, pin: %d\n", freq, pin);
     // Configure the PWM timer
+    #ifdef esp32
     ledc_timer_config_t ledc_timer = {
         .speed_mode       = PWM_MODE,
         .timer_num        = PWM_TIMER,
@@ -509,6 +518,7 @@ void ledcWriteTone(int pin, int freq)
     };
 
     ledc_channel_config(&ledc_channel);
+    #endif
 
 }
 
@@ -521,7 +531,12 @@ void ledcWriteTone(int pin, int freq)
 #define I2C_MASTER_TX_BUF_DISABLE 0
 #define I2C_MASTER_RX_BUF_DISABLE 0
 
+#ifndef esp32
+  typedef int esp_err_t;
+#endif
+
 esp_err_t i2c_master_init(void) {
+    #ifdef esp32
     i2c_config_t conf = {
         .mode = I2C_MODE_MASTER,
         .sda_io_num = I2C_MASTER_SDA_IO,
@@ -535,21 +550,27 @@ esp_err_t i2c_master_init(void) {
     return i2c_driver_install(I2C_MASTER_NUM, conf.mode,
                               I2C_MASTER_RX_BUF_DISABLE,
                               I2C_MASTER_TX_BUF_DISABLE, 0);
+    #else
+      return 0;
+    #endif
 }
 
 // 8-bit I2C address = (7-bit address << 1)
 // Example: TM1650 digit0 addr = 0x34 → write addr = 0x68
 esp_err_t i2c_write(uint8_t addr_8bit, uint8_t data) {
+    esp_err_t err = 0;
+    #ifdef esp32
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, addr_8bit, true);     // Send slave address
     i2c_master_write_byte(cmd, data, true);          // Send data
     i2c_master_stop(cmd);
-    esp_err_t err = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, pdMS_TO_TICKS(1000));
+    err = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, pdMS_TO_TICKS(1000));
     i2c_cmd_link_delete(cmd);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "I2C write failed: %s", esp_err_to_name(err));
     }
+    #endif
     return err;
 }
 
@@ -654,6 +675,9 @@ static void run() {
   WP = P + sizeof(cell_t);
   for(;;) {
     unsigned char bytecode = cData[P++];
+    #ifdef TRACE_EXECUTION
+    printf("executing at %u: %s\n",lastP,opname[bytecode]);
+    #endif
     primitives[bytecode]();
   }
 }
