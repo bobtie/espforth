@@ -49,7 +49,7 @@
 // #define OLD_ACCEPT
 // #define TRACE_EXECUTION
 #define ABORT_IF_UNDERFLOW 0
-#define SIMPLE_DOTOK
+// #define SIMPLE_DOTOK
 
 static const char *TAG = "espforth";
 
