@@ -5,14 +5,14 @@ VARIABLE DOT-TIME
 \ duration of a symbol, i.e. the beep of a dot
 100 DOT-TIME !
 
-: ACTION
-    \ TONE-STATE 
-    ." l:" . SPACE
+: TONE-ACTION
+    TONE-STATE 
+    \ ." l:" . SPACE
 ;
 
 : TIME-ACTION
-    \ MS
-    ." p:" . SPACE
+    MS
+    \ ." p:" . SPACE
 ;
 
 : DS \ dot space
@@ -28,11 +28,11 @@ VARIABLE DOT-TIME
 ;
 
 : DOT 
-    1 ACTION DS 0 ACTION DS
+    1 TONE-ACTION DS 0 TONE-ACTION DS
 ;
 
 : LINE 
-    1 ACTION DS DS DS 0 ACTION DS
+    1 TONE-ACTION DS DS DS 0 TONE-ACTION DS
 ;
 
 : SOS  DOT DOT DOT LS LINE LINE LINE LS DOT DOT DOT WS
