@@ -43,6 +43,9 @@
 
 static const char* TAG = "espforth";
 
+#define VER_MAJ 1 
+#define VER_MIN 2
+
 #define DEBUG_CORE_WORDS 0
 #define FILE_BUFFER_SIZE 0x4000
 
@@ -720,7 +723,7 @@ static void Init(void) {
 }
 
 #else
-#define BOOT_PATH "boot.fs"
+
 static struct termios terminalOld;
 static void RestoreTerminal(void) {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminalOld);
@@ -741,7 +744,14 @@ static void Init(void) {
 #ifdef esp32
 void app_main(void) {
 #else
-int main(void) {
+int main(int argc, const char * argv[])
+{
+     printf("lnxespforth, ver. %d.%d\n",VER_MAJ,VER_MIN);
+     const char * BOOT_PATH = "boot.fs";
+
+     if (argc == 2) {
+          BOOT_PATH = argv[1];
+     }
 #endif
   Init();
   S = 0;
