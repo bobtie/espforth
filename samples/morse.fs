@@ -1,14 +1,22 @@
+\ connect pin 18 with speaker
 880 18 TONE-INIT
 VARIABLE DOT-TIME
 
+\ duration of a symbol, i.e. the beep of a dot
 100 DOT-TIME !
 
 : ACTION
-    TONE-STATE 
+    \ TONE-STATE 
+    ." l:" . 
+;
+
+: TIME-ACTION
+    \ MS
+    ." p:" .
 ;
 
 : DS \ dot space
-    DOT-TIME @ MS 
+    DOT-TIME @ TIME-ACTION
 ;
 
 : LS \ letter space
@@ -69,7 +77,7 @@ VARIABLE CODES  ' A , ' B , ' C , ' D , ' E , ' F , ' G , ' H , ' I , ' J , ' K 
 ;
 
 : HELP
-    CR CR ." morse example ver. 1.7" CR CR
+    CR CR ." morse example ver. 1.8" CR CR
 ;
 
 HELP
