@@ -6,13 +6,13 @@ VARIABLE DOT-TIME
 100 DOT-TIME !
 
 : TONE-ACTION
-    TONE-STATE 
-    \ ." l:" . SPACE
+    \ TONE-STATE 
+    ." l:" . SPACE
 ;
 
 : TIME-ACTION
-    MS
-    \ ." p:" . SPACE
+    \ MS
+    ." p:" . SPACE
 ;
 
 : DS \ dot space
@@ -71,21 +71,32 @@ VARIABLE CODES  ' A , ' B , ' C , ' D , ' E , ' F , ' G , ' H , ' I , ' J , ' K 
     65 - 1+ CELLS CODES + @ EXECUTE
 ;
 
+: ACCEPT-MORSE
+    TIB 100 ACCEPT 1- DUP FOR DUP R@ - TIB + C@ DUP 32 = IF WS ELSE >upper >MORSE THEN NEXT DROP
+;
+
 : DEMO1
+    ." the word roberto will be emitted after you have pressed a key" KEY DROP
     R O B E R T O
 ;
 
 : DEMO2
+    ." emit the alphabeth after you have pressed a key" KEY DROP
     24 FOR 24 R@ - >MORSE NEXT
 ;
 
-
 : DEMO3
-    TIB 100 ACCEPT 1- DUP FOR DUP R@ - TIB + C@ >upper >MORSE NEXT DROP
+    BEGIN
+    ." type a string, it will be emitted as morse: " 
+    CR ACCEPT-MORSE CR
+    AGAIN
 ;
 
+
+
 : HELP
-    CR CR ." morse example ver. 1.9" CR CR
+    CR CR ." morse example ver. 1.10" CR 
+    ." try: DEMO1 DEMO2 or DEMO3" CR
 ;
 
 HELP
