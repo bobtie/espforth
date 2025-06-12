@@ -2,17 +2,18 @@
 880 18 TONE-INIT
 VARIABLE DOT-TIME
 
+
 \ duration of a symbol, i.e. the beep of a dot
 100 DOT-TIME !
 
 : TONE-ACTION
-    \ TONE-STATE 
-    ." l:" . SPACE
+    TONE-STATE 
+    \ ." l:" . SPACE
 ;
 
 : TIME-ACTION
-    \ MS
-    ." p:" . SPACE
+    MS
+    \ ." p:" . SPACE
 ;
 
 : DS \ dot space
@@ -72,7 +73,7 @@ VARIABLE CODES  ' A , ' B , ' C , ' D , ' E , ' F , ' G , ' H , ' I , ' J , ' K 
 ;
 
 : ACCEPT-MORSE
-    TIB 100 ACCEPT 1- DUP FOR DUP R@ - TIB + C@ DUP 32 = IF WS ELSE >upper >MORSE THEN NEXT DROP
+    TIB 100 ACCEPT 1- DUP FOR DUP R@ - TIB + C@ DUP 32 = IF DROP WS ELSE >upper >MORSE THEN NEXT DROP
 ;
 
 : DEMO1
