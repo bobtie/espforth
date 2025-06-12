@@ -7,12 +7,12 @@ VARIABLE DOT-TIME
 
 : ACTION
     \ TONE-STATE 
-    ." l:" . 
+    ." l:" . SPACE
 ;
 
 : TIME-ACTION
     \ MS
-    ." p:" .
+    ." p:" . SPACE
 ;
 
 : DS \ dot space
@@ -67,17 +67,25 @@ VARIABLE DOT-TIME
 
 VARIABLE CODES  ' A , ' B , ' C , ' D , ' E , ' F , ' G , ' H , ' I , ' J , ' K , ' L , ' M , ' N , ' O , ' P , ' Q , ' R , ' S , ' T , ' U , ' V , ' W , ' X , ' Y , ' Z ,
 
+: >MORSE ( n -- ) \ emit a character A-Z as morse code
+    65 - 1+ CELLS CODES + @ EXECUTE
+;
 
 : DEMO1
     R O B E R T O
 ;
 
 : DEMO2
-    24 FOR 24 R@ - 1+ CELLS CODES + @ EXECUTE NEXT
+    24 FOR 24 R@ - >MORSE NEXT
+;
+
+
+: DEMO3
+    TIB 100 ACCEPT 1- DUP FOR DUP R@ - TIB + C@ >upper >MORSE NEXT DROP
 ;
 
 : HELP
-    CR CR ." morse example ver. 1.8" CR CR
+    CR CR ." morse example ver. 1.9" CR CR
 ;
 
 HELP
