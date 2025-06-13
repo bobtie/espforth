@@ -7,11 +7,11 @@ VARIABLE DOT-TIME
 100 DOT-TIME !
 
 : TONE-ACTION
-    PLATFORM 45 = IF TONE-STATE ELSE ." l:" . SPACE THEN
+    PLATFORM 69 = IF TONE-STATE ELSE ." l:" . SPACE THEN
 ;
 
 : TIME-ACTION
-    PLATFORM 45 = IF MS ELSE ." p:" . SPACE THEN
+    PLATFORM 69 = IF MS ELSE ." p:" . SPACE THEN
 ;
 
 : DS \ dot space
@@ -70,8 +70,12 @@ VARIABLE CODES  ' A , ' B , ' C , ' D , ' E , ' F , ' G , ' H , ' I , ' J , ' K 
     65 - 1+ CELLS CODES + @ EXECUTE
 ;
 
+: $MORSE 
+    1- DUP FOR DUP R@ - 2 PICK + C@ DUP 32 = IF DROP WS ELSE >upper >MORSE THEN NEXT DROP
+;
+
 : ACCEPT-MORSE
-    TIB 100 ACCEPT 1- DUP FOR DUP R@ - TIB + C@ DUP 32 = IF DROP WS ELSE >upper >MORSE THEN NEXT DROP
+    TIB DUP 100 ACCEPT $MORSE
 ;
 
 : DEMO1
@@ -91,11 +95,14 @@ VARIABLE CODES  ' A , ' B , ' C , ' D , ' E , ' F , ' G , ' H , ' I , ' J , ' K 
     AGAIN
 ;
 
-
+: DEMO4
+    ." press a key and you will hear 'ciao roberto'" KEY DROP
+    $" ciao roberto" COUNT $MORSE DROP
+;
 
 : HELP
-    CR CR ." morse example ver. 1.10" CR CR
-    ." try: DEMO1 DEMO2 or DEMO3" CR
+    CR CR ." morse example ver. 1.11" CR CR
+    ." try: DEMO1 DEMO2 DEMO3 or DEMO4" CR
 ;
 
 HELP
