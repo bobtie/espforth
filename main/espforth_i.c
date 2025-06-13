@@ -19,26 +19,8 @@
 // #define esp32
 // #define BB_LOG
 
-#ifdef esp32
-#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
-#include "esp_log.h"
-#include "esp_mac.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_system.h"
-#include "driver/gpio.h"
-#include "driver/ledc.h"
-// #  include "esp_spi_flash.h"
-#include "esp_err.h"
-#include "esp_vfs.h"
-#include "esp_vfs_dev.h"
-#include "esp_vfs_fat.h"
-#include "esp_system.h"
-#include "driver/uart.h"
-#else
 #include <termios.h>
 #include <unistd.h>
-#endif
 
 #ifdef BB_LOG
 #define log(...) fprintf(stderr, __VA_ARGS__)
