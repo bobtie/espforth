@@ -6,13 +6,11 @@ VARIABLE DOT-TIME
 100 DOT-TIME !
 
 : TONE-ACTION
-    TONE-STATE 
-    \ ." l:" . SPACE
+    PLATFORM 45 = IF TONE-STATE ELSE ." l:" . SPACE THEN
 ;
 
 : TIME-ACTION
-    MS
-    \ ." p:" . SPACE
+    PLATFORM 45 = IF MS ELSE ." p:" . SPACE THEN
 ;
 
 : DS \ dot space
@@ -85,7 +83,7 @@ VARIABLE CODES  ' A , ' B , ' C , ' D , ' E , ' F , ' G , ' H , ' I , ' J , ' K 
 ;
 
 : HELP
-    CR CR ." morse example ver. 1.9" CR CR
+    CR CR ." morse example ver. 1.10" CR CR
 ;
 
 HELP
