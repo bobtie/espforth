@@ -2,6 +2,7 @@
 880 18 TONE-INIT
 VARIABLE DOT-TIME
 
+
 \ duration of a symbol, i.e. the beep of a dot
 100 DOT-TIME !
 
@@ -69,21 +70,32 @@ VARIABLE CODES  ' A , ' B , ' C , ' D , ' E , ' F , ' G , ' H , ' I , ' J , ' K 
     65 - 1+ CELLS CODES + @ EXECUTE
 ;
 
+: ACCEPT-MORSE
+    TIB 100 ACCEPT 1- DUP FOR DUP R@ - TIB + C@ DUP 32 = IF DROP WS ELSE >upper >MORSE THEN NEXT DROP
+;
+
 : DEMO1
+    ." the word roberto will be emitted after you have pressed a key" KEY DROP
     R O B E R T O
 ;
 
 : DEMO2
+    ." emit the alphabeth after you have pressed a key" KEY DROP
     24 FOR 24 R@ - >MORSE NEXT
 ;
 
-
 : DEMO3
-    TIB 100 ACCEPT 1- DUP FOR DUP R@ - TIB + C@ >upper >MORSE NEXT DROP
+    BEGIN
+    ." type a string, it will be emitted as morse: " 
+    CR ACCEPT-MORSE CR
+    AGAIN
 ;
+
+
 
 : HELP
     CR CR ." morse example ver. 1.10" CR CR
+    ." try: DEMO1 DEMO2 or DEMO3" CR
 ;
 
 HELP
