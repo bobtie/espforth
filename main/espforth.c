@@ -19,6 +19,7 @@
 
 #ifdef esp32
 #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
+#define PLATFORM 'E'//SP32
 #include "esp_log.h"
 #  include "esp_mac.h"
 #  include "freertos/FreeRTOS.h"
@@ -37,6 +38,7 @@
 #  include "driver/adc.h"
 #  include "esp_adc/adc_oneshot.h"
 #else
+#define PLATFORM 'L'//INUX
 #  include <termios.h>
 #  include <unistd.h>
 #endif
@@ -980,6 +982,10 @@ int main(void) {
     IF,DROP,ELSE,FIB,SWAP,LOAD,THEN,THEN,EXIT);
   COLD=COLON("COLD",
     BOOT,DOTQ,"AIBOT ESP32 Forth",CR,BEGIN,QUIT,AGAIN,EXIT);
+
+  // --- My wokrds
+  COLON("PLATFORM",
+    DOLIT,PLATFORM,EXIT);
 
   // ---- ESP32 WORDS
   
