@@ -9,12 +9,17 @@ HEX
 \     i2c_write(PCF8574_ADDR, data & ~0x04); // E=0
 \ }
 
+: i2c-m-write-check
+    i2c-m-write
+    0 = if  else ." write failed" then
+;
+
 : lcd-send-nibble ( n rs -- ) \ send a nibble (n must have the form 0xm0) to the LCD (rs is 0 for command, 1 for data)
     or \ prepare the nibble with RS bit
     8 or \ Backlight ON
     dup
-    04 or LCD_ADDRESS i2c-m-write drop \ send with E=1
-    04 inverse and LCD_ADDRESS i2c-m-write drop \ send with E=0
+    04 or LCD_ADDRESS i2c-m-write-check \ send with E=1
+    04 inverse and LCD_ADDRESS i2c-m-write-check \ send with E=0
 ;
 
 : lshift \ ( n m -- n << m )
@@ -49,18 +54,25 @@ HEX
     1 lcd-send \ rs = 1 for data
     ;
 
-: lcd-init
-    \ Send 0x30 (Function Set) three times
+: lcd-init-sequence
+   \ Send 0x30 (Function Set) three times
     30 lcd-send-cmd
     5 ms
     30 lcd-send-cmd
     5 ms
     30 lcd-send-cmd
     5 ms
+;
 
+: lcd-set-4-bit-mode
     \ Set 4-bit mode
     20 lcd-send-cmd
     1 ms
+;
+
+: lcd-init
+    \ lcd-init-sequence
+    \ lcd-set-4-bit-mode
 
     \ Now send full commands in 4-bit mode:
     28 lcd-send-cmd \ Function set: 4-bit, 2 lines, 5x8 dots
@@ -87,11 +99,12 @@ DECIMAL
 : lcd-demo
     i2c-m-init
     lcd-init
+    lcd-send-roberto
 ;
 
 
 : HELP 
-    ." lcd demo ver 1.0" CR
+    ." lcd demo ver 1.3" CR
     ." try lcd-demo for a demo" CR
 ;
 
