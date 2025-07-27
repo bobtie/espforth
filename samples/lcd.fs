@@ -28,6 +28,7 @@
 \ P7    D7
 
 HEX
+
 27 2 * CONSTANT LCDADDR
 
 4 CONSTANT EN 
@@ -67,15 +68,28 @@ HEX
     1 sb
 ;
 
+: clr ( ) \ Clear the display
+    01 cmd 
+;
+
+: b0-mask ( n -- m ) \ mask on the first bit (b0)
+    1 and
+;
+
+: dspl ( b c d -- ) \ set display: d=display on/off, c=cursor on/off, b=blink on/off;
+    b0-mask 4 * swap b0-mask 2 * rot b0-mask + + 8 + cmd
+;
+
 : init
     i \ Initialize the I2C bus
     30 se
     30 se
     30 se
     20 se \ Set to 4-bit mode
+
     28 cmd \ Function set: 4-bit, 2 line, 5x8 dots
     08 cmd \ Display off
-    01 cmd \ Clear display
+    clr
     06 cmd \ Entry mode set: increment cursor
     0C cmd \ Display ON, Cursor OFF, Blink OFF
 ;
@@ -100,7 +114,9 @@ HEX
 ;
 
 : HELP
-." if hex is selected, you see FF in the stack" CR
+    ." lcd ver 1.2" CR
 ;
 
-FF HELP
+DECIMAL
+
+HELP
