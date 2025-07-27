@@ -1,14 +1,18 @@
-    \ lcd_send_nibble(0x30); vTaskDelay(5 / portTICK_PERIOD_MS);
-    \ lcd_send_nibble(0x30); vTaskDelay(1 / portTICK_PERIOD_MS);
-    \ lcd_send_nibble(0x30); vTaskDelay(1 / portTICK_PERIOD_MS);
-    \ lcd_send_nibble(0x20); // Set to 4-bit mode
+\ initialization for LCD display using I2C
+\ This code is for a 4-bit LCD display controlled via I2C.
+\ The example was created by ChatGPT
 
-    \ lcd_send_cmd(0x28); // Function set: 4-bit, 2 line, 5x8 dots
-    \ lcd_send_cmd(0x08); // Display off
-    \ lcd_send_cmd(0x01); // Clear display
-    \ vTaskDelay(2 / portTICK_PERIOD_MS);
-    \ lcd_send_cmd(0x06); // Entry mode set: increment cursor
-    \ lcd_send_cmd(0x0C); // Display ON, Cursor OFF, Blink OFF
+\ lcd_send_nibble(0x30); vTaskDelay(5 / portTICK_PERIOD_MS);
+\ lcd_send_nibble(0x30); vTaskDelay(1 / portTICK_PERIOD_MS);
+\ lcd_send_nibble(0x30); vTaskDelay(1 / portTICK_PERIOD_MS);
+\ lcd_send_nibble(0x20); // Set to 4-bit mode
+
+\ lcd_send_cmd(0x28); // Function set: 4-bit, 2 line, 5x8 dots
+\ lcd_send_cmd(0x08); // Display off
+\ lcd_send_cmd(0x01); // Clear display
+\ vTaskDelay(2 / portTICK_PERIOD_MS);
+\ lcd_send_cmd(0x06); // Entry mode set: increment cursor
+\ lcd_send_cmd(0x0C); // Display ON, Cursor OFF, Blink OFF
 
 
 
@@ -29,21 +33,25 @@ HEX
 4 CONSTANT EN 
 
 
-: i 
+: i \ Initialize the I2C bus
     i2c-m-init
 ;
 
 
-: s
+: s ( n -- e ) \ Send the byte n to the LCD display leaving 0 if no error occurred
     LCDADDR i2c-m-write
+    then
 ;
 
 
+: check-error ( n -- ) \ Check for I2C error
+    if ." I2C error" CR else then
+;
 
 : se ( n -- r1 r2 ) \ send with enable pulse
     dup 
-    EN or s drop
-    EN inverse and s drop
+    EN or s check-error
+    EN inverse and s check-error
 ;
 
 : sb ( n rs -- ) \ send a command or data byte
@@ -74,6 +82,17 @@ HEX
 
 : roberto-reversed
     4F 54 52 45 42 4F 52  \ "OTREBOR"
+;
+
+: lcd-write ( c-addr u -- ) \ Write a string to the LCD
+    dup 1 -
+    FOR
+        2dup R@ - + 1 - c@ data 
+    NEXT
+;
+
+: message
+    $" ciao bruno!" COUNT lcd-write
 ;
 
 : roberto
