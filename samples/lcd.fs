@@ -29,8 +29,10 @@
 
 HEX
 
+\ I2C address for the LCD display
 27 2 * CONSTANT LCDADDR
 
+\ I2C enable bit
 4 CONSTANT EN 
 
 
