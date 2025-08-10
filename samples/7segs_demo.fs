@@ -27,16 +27,21 @@ i2c-m-init
 
 hex
 
-68 constant 7s-left
-variable 7s-map 3F , 06 , 5B , 4F , 66 , 6D , 7D , 07 , 7F , 6F ,
+68 constant 7s-left \ 7s-left is the first digit's address
+variable 7s-map 3F , 06 , 5B , 4F , 66 , 6D , 7D , 07 , 7F , 6F , 
 
-: 7s-turnon
-    11 48 i2c-m-write
+
+: 7s-brightness ( n -- ) \ set the brightness of the 7-segment display 
+    48 i2c-m-write
+;
+
+: 7s-turnon \ turn on the 7-segment display
+    F1 7s-brightness
 ;
 
 decimal
 
-: 7s-map-number
+: 7s-map-number \ convert a digit to its 7-segment map value
     1 + cells 7s-map + @
 ;
 
@@ -63,12 +68,12 @@ decimal
     100 mod 0 = IF beep 10 - then ms
 ;
 
-: 7s-counter-with-beep
+: 7s-counter-with-beep ( -- ) \ count from 0 to 9999 with beep on every 100
     9999 FOR DUP 9999 R@ - 
     dup 7s-number beep-if-100 NEXT
 ;
 
-: 7s-counter
+: 7s-counter ( -- ) \ count from 0 to 9999
     9999 
     FOR 
         DUP 9999 R@ - 7s-number MS
@@ -76,7 +81,8 @@ decimal
 ;
 
 : HELP
-." 7-segments demo ver 1.4" CR
+." 7-segments demo ver 1.5" CR
+." try 7s-counter for a demo" CR
 ;
 
 7s-turnon
